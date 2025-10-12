@@ -280,10 +280,10 @@
         let userId = 'anonymous'; // Default until authenticated
         
         // *******************************************************************
-        // CONFIGURATION FIREBASE - UTILISATION DES VARIABLES D'ENVIRONNEMENT
+        // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE
         // *******************************************************************
         
-        // 1. Définir la configuration de repli pour GitHub Pages (mode non-Canvas)
+        // 1. Définir la configuration de repli (FALLBACK)
         const hardcodedFirebaseConfig = {
             apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
             authDomain: "elecmanager-6f50a.firebaseapp.com",
@@ -295,11 +295,31 @@
         };
         const hardcodedAppId = hardcodedFirebaseConfig.appId;
 
-        // 2. Charger les variables d'environnement Canvas, ou utiliser le repli
+        // 2. Charger les variables d'environnement Canvas, en préférant la config injectée
+        let configSource = hardcodedFirebaseConfig;
+        
+        // IMPORTANT: L'ID de l'application est lu séparément
         const appId = typeof __app_id !== 'undefined' ? __app_id : hardcodedAppId;
-        // IMPORTANT : __firebase_config est une chaîne JSON et doit être parsée.
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : hardcodedFirebaseConfig;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        // 3. Tenter de parser la configuration injectée par l'environnement
+        if (typeof __firebase_config !== 'undefined' && __firebase_config.length > 0) {
+            try {
+                // Tentative de parsing (la source principale de l'erreur précédente)
+                const parsedConfig = JSON.parse(__firebase_config);
+                // Utiliser la config parsée si elle semble valide (doit avoir au moins un projectId)
+                if (parsedConfig && parsedConfig.projectId) {
+                    configSource = parsedConfig;
+                    console.log("Firebase: Configuration chargée via __firebase_config (environnement Canvas).");
+                }
+            } catch (e) {
+                console.warn("Firebase: Parsing de __firebase_config échoué. Utilisation de la configuration de repli.");
+            }
+        } else {
+             console.warn("Firebase: __firebase_config est indéfini ou vide. Utilisation de la configuration de repli.");
+        }
+        
+        const firebaseConfig = configSource;
 
         // --- GLOBAL STATE ---
         window.contacts = [];
@@ -327,10 +347,10 @@
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
             try {
-                // Initialisation de l'application avec la configuration (dynamique ou de repli)
+                // Initialisation de l'application avec la configuration validée
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app);
+                auth = getAuth(app); // C'est ici que l'erreur se produit si la configuration est mauvaise.
                 
                 let user;
 
@@ -793,7 +813,7 @@
                 contactToUpdate.controlledByMemberName = actingMember.name;
             } else {
                 // Phone number is being cleared -> release control
-                contactToUpdate.numeroTelephone = '';
+                contactToUpdate.numeroTelephone = null;
                 contactToUpdate.controlledByMemberId = null;
                 contactToUpdate.controlledByMemberName = null;
             }
@@ -805,6 +825,11 @@
             if (contact) {
                  const contactToUpdate = {...contact};
                 contactToUpdate.status = event.target.value;
+                // If status is "A voté", force checkbox check and save
+                if(contactToUpdate.status === 'A voté') {
+                    // Update checkbox to match
+                    document.querySelector(`.voted-checkbox[data-id="${contact.id}"]`).checked = true;
+                }
                 saveContact(contactToUpdate); // Save to Firestore
             }
         }
@@ -813,7 +838,10 @@
              const contact = window.contacts.find(c => c.id == event.target.dataset.id);
              if (contact) {
                 const contactToUpdate = {...contact};
+                // If checked, status is 'A voté'. If unchecked, status goes back to 'Acquis' (or previous status, but Acquis is safer default)
                 contactToUpdate.status = event.target.checked ? 'A voté' : 'Acquis';
+                // Update the status select dropdown to match
+                document.querySelector(`.team-status-select[data-id="${contact.id}"]`).value = contactToUpdate.status;
                 saveContact(contactToUpdate); // Save to Firestore
              }
         }
@@ -849,7 +877,7 @@
                     dateNaissance: data[3] || '', // Assuming format DD/MM/YYYY
                     email: data[9] || '', 
                     assignedTo: null,
-                    numeroTelephone: '', 
+                    numeroTelephone: null, // Use null for empty number
                     controlledByMemberId: null,
                     controlledByMemberName: null
                 };
