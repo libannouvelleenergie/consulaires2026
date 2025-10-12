@@ -280,23 +280,28 @@
         let userId = 'anonymous'; // Default until authenticated
         
         // *******************************************************************
-        // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE (Répliquée du Vérificateur)
+        // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE
         // *******************************************************************
         
-        // Définir la configuration de repli (FALLBACK)
+        // ATTENTION: Si vous déployez sur GitHub (ou hors de l'environnement Gemini), 
+        // les variables __firebase_config et __app_id ne seront pas disponibles.
+        // VOUS DEVEZ REMPLACER les VALEURS DANS hardcodedFirebaseConfig ci-dessous 
+        // par la configuration réelle de votre projet Firebase.
+        
         const hardcodedFirebaseConfig = {
-            apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
-            authDomain: "elecmanager-6f50a.firebaseapp.com",
-            projectId: "elecmanager-6f50a",
-            storageBucket: "elecmanager-6f50a.firebasestorage.app",
-            messagingSenderId: "872950170067",
-            appId: "1:872950170067:web:dc23cc105538d3e88baf26",
-            measurementId: "G-GXP88CTD96"
+            apiKey: "VOTRE_CLE_API_FIREBASE_ICI", // <-- REMPLACER !
+            authDomain: "votre-projet.firebaseapp.com",
+            projectId: "votre-projet", // <-- REMPLACER !
+            storageBucket: "votre-projet.appspot.com",
+            messagingSenderId: "VOTRE_SENDER_ID",
+            appId: "VOTRE_APP_ID", // Exemple: 1:1234567890:web:abcdef1234567890
+            measurementId: "G-XXXXXXXXX"
         };
         const hardcodedAppId = hardcodedFirebaseConfig.appId;
 
         let configSource = hardcodedFirebaseConfig;
         
+        // Tentative de récupération des variables de l'environnement Gemini
         const appId = typeof __app_id !== 'undefined' ? __app_id : hardcodedAppId;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
@@ -305,7 +310,7 @@
             try {
                 const parsedConfig = JSON.parse(__firebase_config);
                 if (parsedConfig && parsedConfig.projectId) {
-                    configSource = parsedConfig;
+                    configSource = parsedConfig; // Utiliser la config injectée si disponible
                 }
             } catch (e) {
                 console.warn("Firebase: Parsing de __firebase_config échoué. Utilisation de la configuration de repli.");
@@ -348,9 +353,11 @@
                 // Authentification
                 let user;
                 if (initialAuthToken) {
+                    // Fonctionne dans l'environnement Gemini
                     const userCredential = await signInWithCustomToken(auth, initialAuthToken);
                     user = userCredential.user;
                 } else {
+                    // Fonctionne sur GitHub/Local (si jeton manquant)
                     const userCredential = await signInAnonymously(auth);
                     user = userCredential.user;
                 }
@@ -827,7 +834,8 @@
 
         async function processCSV(csvText) {
             if (!db) {
-                window.alert("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
+                // Remplacer window.alert par une modale custom si l'application le permet
+                console.error("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
                 return;
             }
             
@@ -850,6 +858,7 @@
                 return contact;
             }).filter(c => c.nomUsage || c.prenoms);
             
+            // Remplacer window.confirm par une modale custom si l'application le permet
             if (window.confirm(`Importer ${newContacts.length} nouveaux contacts ?`)) {
                 let importedCount = 0;
                 for (const contact of newContacts) {
@@ -860,7 +869,8 @@
                         console.error("Erreur lors de l'importation d'un contact:", e);
                     }
                 }
-                window.alert(`${importedCount} contacts importés.`);
+                // Remplacer window.alert par une modale custom si l'application le permet
+                console.log(`${importedCount} contacts importés.`);
                 document.getElementById('csv-file-input').value = '';
             }
         }
