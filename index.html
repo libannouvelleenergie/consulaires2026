@@ -112,7 +112,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-gray-800">Campagne Électorale Consulaires 2026</h1>
                 <div id="user-info" class="text-sm text-gray-500 flex items-center space-x-4">
-                    <span class="font-medium text-gray-700">ID Session:</span> <span id="user-id" class="break-all">...</span>
+                    <span class="font-medium text-gray-700">Connecté:</span> <span id="user-id" class="break-all font-semibold text-gray-900">Non Connecté</span>
                     <span id="team-member-status" class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 hidden"></span>
                     <button id="team-logout-btn" class="inline-flex justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-md text-white bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Déconnexion</button>
                 </div>
@@ -337,7 +337,7 @@
     <!-- FIREBASE IMPORTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
@@ -410,10 +410,59 @@
             'Acquis': 'Acquis', 'Refus': 'Refus'
         };
         
+        // --- FIRESTORE UTILS ---
+        // Public collection path for collaborative team data
+        function getPublicCollectionRef(collectionName) {
+            return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+        }
+        
+        // Private collection for user-specific data (e.g., projection history)
+        function getPrivateCollectionRef(collectionName) {
+            return collection(db, 'artifacts', appId, 'users', userId, collectionName);
+        }
+
+        // --- FIRESTORE LISTENERS (Real-time updates) ---
+        function loadPublicData() {
+            if (!db) return;
+            
+            // NOTE IMPORTANTE: Pour que ces écouteurs fonctionnent, les règles de sécurité Firestore
+            // DOIVENT autoriser la lecture pour les utilisateurs non authentifiés/anonymes sur ces chemins (read: if true).
+
+            // 1. Listen for Team Members (Public/Shared data)
+            onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
+                window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                window.updateAll();
+                window.updateLoginSelect(); // Keep the splash screen's select up to date
+            }, (error) => console.error("Error fetching team members:", error));
+            
+            // 2. Listen for Contacts (Public/Shared data)
+            onSnapshot(getPublicCollectionRef('contacts'), (snapshot) => {
+                window.contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                window.updateAll();
+            }, (error) => console.error("Error fetching contacts:", error));
+
+        }
+
+        function setupPrivateDataListeners() {
+            if (!db || !window.isAuthReady) return;
+            
+            // 3. Listen for Projection History (User-specific private data)
+            // Cet écouteur ne démarre qu'après une connexion réussie et l'authentification de l'utilisateur
+            onSnapshot(getPrivateCollectionRef('projectionHistory'), (snapshot) => {
+                window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
+                
+                const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
+                if (lastHistory && lastHistory.goal) {
+                    window.votesGoal = lastHistory.goal;
+                }
+                window.updateAll();
+            }, (error) => console.error("Error fetching history:", error));
+        }
+
+
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
             console.log("Configuration Firebase finale utilisée:", firebaseConfig);
-            console.log(`Jeton d'authentification initial disponible: ${!!initialAuthToken}`);
 
             if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
                 const errorMsg = "Erreur critique: apiKey, authDomain, ou projectId manquant. Vérifiez vos variables.";
@@ -429,33 +478,36 @@
                 db = getFirestore(app);
                 auth = getAuth(app); 
                 
-                // Authentification
-                let user;
+                // 1. Authentification en utilisant le jeton personnalisé (Canvas) ou l'anonyme
                 if (initialAuthToken) {
-                    const userCredential = await signInWithCustomToken(auth, initialAuthToken);
-                    user = userCredential.user;
+                     // Utilisation du jeton fourni par l'environnement Canvas pour une connexion fiable
+                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    const userCredential = await signInAnonymously(auth);
-                    user = userCredential.user;
+                     // Fallback: Authentification anonyme
+                     await signInAnonymously(auth);
                 }
+                
+                userId = auth.currentUser?.uid || crypto.randomUUID(); 
+                window.isAuthReady = true;
 
-                if (user) {
-                    userId = user.uid;
-                    document.getElementById('user-id').textContent = userId;
-                    window.isAuthReady = true; 
-                    setupFirestoreListeners(); // Démarrage des écouteurs après succès
-                } else {
-                     document.getElementById('critical-error-message').textContent = "Erreur: Impossible d'authentifier l'utilisateur. (UID non disponible)";
-                     document.getElementById('critical-error-message').classList.remove('hidden');
-                     return;
-                }
+                // 2. Démarrer l'écoute des données publiques (membres d'équipe, contacts) immédiatement.
+                // Cela est fait après l'authentification (même anonyme) pour respecter les règles de sécurité.
+                loadPublicData();
+                
+                // 3. Cacher l'indicateur de chargement
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('user-id').textContent = 'Non Connecté';
 
+                // 4. L'écouteur d'état d'authentification gère le changement d'ID utilisateur
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid; 
+                        // Note: setupPrivateDataListeners() sera appelé après la connexion manuelle réussie
                     }
                 });
 
+                // 5. Assurer que le splash screen est visible pour la connexion manuelle
+                document.getElementById('login-splash-view').classList.remove('hidden');
 
             } catch (error) {
                 console.error("Erreur d'initialisation ou d'authentification Firebase:", error);
@@ -471,46 +523,6 @@
             }
         }
         
-        // --- FIRESTORE UTILS ---
-        // Public collection path for collaborative team data
-        function getPublicCollectionRef(collectionName) {
-            return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
-        }
-        
-        // Private collection for user-specific data (e.g., projection history)
-        function getPrivateCollectionRef(collectionName) {
-            return collection(db, 'artifacts', appId, 'users', userId, collectionName);
-        }
-
-        // --- FIRESTORE LISTENERS (Real-time updates) ---
-        function setupFirestoreListeners() {
-            if (!db || !window.isAuthReady) return;
-
-            // 1. Listen for Team Members (Public/Shared data)
-            onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
-                window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                window.updateAll();
-                window.updateLoginSelect(); // Keep the splash screen's select up to date
-            }, (error) => console.error("Error fetching team members:", error));
-            
-            // 2. Listen for Contacts (Public/Shared data)
-            onSnapshot(getPublicCollectionRef('contacts'), (snapshot) => {
-                window.contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                window.updateAll();
-            }, (error) => console.error("Error fetching contacts:", error));
-
-            // 3. Listen for Projection History (User-specific private data)
-            onSnapshot(getPrivateCollectionRef('projectionHistory'), (snapshot) => {
-                window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
-                
-                const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
-                if (lastHistory && lastHistory.goal) {
-                    window.votesGoal = lastHistory.goal;
-                }
-                window.updateAll();
-            }, (error) => console.error("Error fetching history:", error));
-        }
-
         // --- FIRESTORE ACTIONS ---
         async function saveContact(contact) {
             if (!db) return;
@@ -605,11 +617,15 @@
         }
 
         window.updateTeamStatusDisplay = function() {
+            const userIdDisplayEl = document.getElementById('user-id');
             const statusEl = document.getElementById('team-member-status');
             const memberInfoEl = document.getElementById('current-member-info');
             const adminInfoEl = document.getElementById('is-admin-info');
 
             if (window.currentTeamMemberId) {
+                // Afficher le nom du membre au lieu du Firebase UID
+                userIdDisplayEl.textContent = window.currentTeamMemberName;
+                
                 statusEl.classList.remove('hidden', 'bg-yellow-100', 'text-yellow-800');
                 statusEl.classList.add('bg-green-100', 'text-green-800');
                 statusEl.textContent = `Connecté: ${window.currentTeamMemberName}`;
@@ -619,6 +635,7 @@
                 adminInfoEl.classList.toggle('hidden', !window.isAdmin);
 
             } else {
+                userIdDisplayEl.textContent = 'Non Connecté'; // Afficher 'Non Connecté' si déconnecté
                 statusEl.classList.add('hidden');
                 memberInfoEl.textContent = 'Non connecté.';
                 adminInfoEl.classList.add('hidden');
@@ -732,9 +749,18 @@
 
         // --- CONTACTS MANAGEMENT ---
         window.renderContacts = function(filteredContacts = null) {
+            // RBAC: Non-admin users only see contacts assigned to them
+            const isContactAccessRestricted = !window.isAdmin && !document.getElementById('team-view').classList.contains('hidden');
+
             const tableBody = document.getElementById('contacts-table-body');
             tableBody.innerHTML = '';
-            const contactsToRender = filteredContacts || window.contacts;
+            
+            let contactsToRender = filteredContacts || window.contacts;
+            
+            if (isContactAccessRestricted) {
+                // If on 'team' view AND not admin, only show self-assigned contacts in the general list (for coherence, though they use the team list primarily)
+                contactsToRender = contactsToRender.filter(c => c.assignedTo === window.currentTeamMemberId);
+            }
             
             const teamMembersOptions = window.teamMembers.map(tm => `<option value="${tm.id}">${tm.name}</option>`).join('');
 
@@ -743,6 +769,8 @@
                 const contactTeamOptions = window.teamMembers.map(tm => 
                     `<option value="${tm.id}" ${contact.assignedTo == tm.id ? 'selected' : ''}>${tm.name}</option>`
                 ).join('');
+                
+                const deleteButton = window.isAdmin ? `<button data-id="${contact.id}" class="delete-btn text-red-600 hover:text-red-900">Supprimer</button>` : '';
 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance}</td>
@@ -751,13 +779,13 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.numeroTelephone || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="color: ${STATUS_COLORS[contact.status]}; background-color: ${STATUS_COLORS[contact.status]}20;">${contact.status}</span></td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
-                         <select data-id="${contact.id}" class="assign-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-xs">
+                         <select data-id="${contact.id}" class="assign-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-xs" ${!window.isAdmin ? 'disabled' : ''}>
                             <option value="">Non assigné</option>
                             ${contactTeamOptions}
                         </select>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button data-id="${contact.id}" class="delete-btn text-red-600 hover:text-red-900">Supprimer</button>
+                        ${deleteButton}
                     </td>
                 `;
                 tableBody.appendChild(row);
@@ -768,6 +796,7 @@
         }
         
         function handleAssignContact(event) {
+            if (!window.isAdmin) return;
             const contactId = event.target.dataset.id;
             const newMemberId = event.target.value; 
             const contact = window.contacts.find(c => c.id == contactId);
@@ -780,6 +809,7 @@
         }
 
         function handleDeleteContact(event) {
+            if (!window.isAdmin) return;
             const contactId = event.target.dataset.id;
             
             if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
@@ -844,7 +874,7 @@
                                                 </span>
                                                 ${member.isAdmin ? '<span class="text-green-600 ml-2 font-bold">ADMIN</span>' : ''}
                                             </div>
-                                            <button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold ml-4">X</button>
+                                            <button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold ml-4" ${!window.isAdmin ? 'disabled' : ''}>X</button>
                                           </div>`;
             });
             
@@ -857,6 +887,7 @@
         }
 
         function handleAddTeamMember() {
+            if (!window.isAdmin) return;
             const input = document.getElementById('new-team-member');
             if (input.value.trim()) {
                 addTeamMember(input.value.trim()); 
@@ -865,6 +896,7 @@
         }
 
         function handleDeleteTeamMember(event) {
+            if (!window.isAdmin) return;
             const memberId = event.target.dataset.id;
             
             if(window.confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
@@ -911,8 +943,10 @@
                 window.currentTeamMemberName = member.name;
                 window.isAdmin = member.isAdmin || false; // Set admin status
 
+                // Setup private data listeners (like projection history) now that we have a persistent user ID
+                setupPrivateDataListeners();
+
                 document.getElementById('splash-auth-key-input').value = ''; // Clear key input
-                document.getElementById('splash-login-member-select').value = ''; // Reset select
                 
                 // Show main app, hide splash screen
                 document.getElementById('login-splash-view').classList.add('hidden');
@@ -938,6 +972,7 @@
             document.getElementById('login-splash-view').classList.remove('hidden');
             
             window.updateLoginSelect();
+            window.updateTeamStatusDisplay();
         }
 
         window.renderAssignedContacts = function(memberId) {
@@ -951,6 +986,7 @@
             if (!memberId) return;
 
             tableBody.innerHTML = '';
+            // Only show contacts assigned to the current member (or the admin-selected member)
             const assigned = window.contacts.filter(c => c.assignedTo == memberId);
             const actingMember = window.teamMembers.find(m => m.id === memberId); 
             if (!actingMember) return; 
@@ -1110,6 +1146,8 @@
         // --- PROJECTION LOGIC ---
         document.getElementById('run-projection').addEventListener('click', runProjection);
         async function runProjection() {
+             if (!window.isAdmin) return; // Projection is admin only
+
             const totalInscrits = parseInt(document.getElementById('total-inscrits').value);
             const turnout = parseFloat(document.getElementById('turnout').value);
             const numLists = parseInt(document.getElementById('num-lists').value);
@@ -1278,7 +1316,7 @@
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
             initializeFirebase(); 
-            // The splash screen is initially visible, main app is hidden.
+            // The splash screen will be managed by initializeFirebase after anonymous login.
 
             // Navigation setup
             const views = {
