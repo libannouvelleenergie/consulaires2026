@@ -68,7 +68,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-gray-800">Campagne Électorale Consulaires 2026</h1>
                 <div id="user-info" class="text-sm text-gray-500">
-                    <span class="font-medium text-gray-700">Utilisateur ID:</span> <span id="user-id">...</span>
+                    <span class="font-medium text-gray-700">Utilisateur ID:</span> <span id="user-id" class="break-all">...</span>
                 </div>
             </div>
         </header>
@@ -93,7 +93,7 @@
                 
                 <!-- Loading Indicator -->
                 <div id="loading-indicator" class="text-center p-8 text-lg font-medium text-blue-600">
-                    Chargement des données en cours...
+                    Connexion aux services de données...
                 </div>
 
                 <!-- Dashboard View -->
@@ -280,10 +280,10 @@
         let userId = 'anonymous'; // Default until authenticated
         
         // *******************************************************************
-        // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE
+        // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE (Répliquée du Vérificateur)
         // *******************************************************************
         
-        // 1. Définir la configuration de repli (FALLBACK)
+        // Définir la configuration de repli (FALLBACK)
         const hardcodedFirebaseConfig = {
             apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
             authDomain: "elecmanager-6f50a.firebaseapp.com",
@@ -295,29 +295,22 @@
         };
         const hardcodedAppId = hardcodedFirebaseConfig.appId;
 
-        // 2. Charger les variables d'environnement Canvas, en préférant la config injectée
         let configSource = hardcodedFirebaseConfig;
         
-        // IMPORTANT: L'ID de l'application est lu séparément
         const appId = typeof __app_id !== 'undefined' ? __app_id : hardcodedAppId;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
-        // 3. Tenter de parser la configuration injectée par l'environnement
+        // Tenter de parser la configuration injectée par l'environnement
         if (typeof __firebase_config !== 'undefined' && __firebase_config.length > 0) {
             try {
-                // Tentative de parsing (la source principale de l'erreur précédente)
                 const parsedConfig = JSON.parse(__firebase_config);
-                // Utiliser la config parsée si elle semble valide (doit avoir au moins un projectId)
                 if (parsedConfig && parsedConfig.projectId) {
                     configSource = parsedConfig;
-                    console.log("Firebase: Configuration chargée via __firebase_config (environnement Canvas).");
                 }
             } catch (e) {
                 console.warn("Firebase: Parsing de __firebase_config échoué. Utilisation de la configuration de repli.");
             }
-        } else {
-             console.warn("Firebase: __firebase_config est indéfini ou vide. Utilisation de la configuration de repli.");
-        }
+        } 
         
         const firebaseConfig = configSource;
 
@@ -347,20 +340,17 @@
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
             try {
-                // Initialisation de l'application avec la configuration validée
+                // Initialisation de l'application
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app); // C'est ici que l'erreur se produit si la configuration est mauvaise.
+                auth = getAuth(app); 
                 
+                // Authentification
                 let user;
-
-                // 1. Tenter l'authentification
                 if (initialAuthToken) {
-                    // Connexion sécurisée avec le jeton Canvas
                     const userCredential = await signInWithCustomToken(auth, initialAuthToken);
                     user = userCredential.user;
                 } else {
-                    // Repli pour le mode local/GitHub Pages
                     const userCredential = await signInAnonymously(auth);
                     user = userCredential.user;
                 }
@@ -368,27 +358,27 @@
                 if (user) {
                     userId = user.uid;
                     document.getElementById('user-id').textContent = userId;
-                    window.isAuthReady = true; // Auth est confirmé et prêt
+                    window.isAuthReady = true; 
+                    setupFirestoreListeners(); // Démarrage des écouteurs après succès
+                    
+                    document.getElementById('loading-indicator').classList.add('hidden');
+                    document.getElementById('dashboard-view').classList.remove('hidden');
 
-                    // 2. Mise en place des écouteurs après succès de l'authentification
-                    setupFirestoreListeners();
                 } else {
-                     document.getElementById('loading-indicator').textContent = "Erreur: Impossible d'authentifier l'utilisateur.";
+                     document.getElementById('loading-indicator').textContent = "Erreur: Impossible d'authentifier l'utilisateur. (UID non disponible)";
                      return;
                 }
 
-                // 3. Observez les changements d'état (pour robustesse)
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid; 
                     }
                 });
 
-                document.getElementById('loading-indicator').classList.add('hidden');
-                document.getElementById('dashboard-view').classList.remove('hidden');
 
             } catch (error) {
                 console.error("Erreur d'initialisation ou d'authentification Firebase:", error);
+                // Le message d'erreur est affiché à l'utilisateur
                 document.getElementById('loading-indicator').textContent = "Erreur de connexion aux services de données: " + error.message;
             }
         }
@@ -396,39 +386,34 @@
         // --- FIRESTORE UTILS ---
         // Public collection path for collaborative team data
         function getPublicCollectionRef(collectionName) {
-            // Utilise le appId dynamique/de repli
             return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
         }
         
         // Private collection for user-specific data (e.g., projection history)
         function getPrivateCollectionRef(collectionName) {
-            // Utilise le appId dynamique/de repli et le userId actuel
             return collection(db, 'artifacts', appId, 'users', userId, collectionName);
         }
 
-        // --- FIRESTORE LISTENERS (Replacing loadFromLocalStorage) ---
+        // --- FIRESTORE LISTENERS (Real-time updates) ---
         function setupFirestoreListeners() {
             if (!db || !window.isAuthReady) return;
 
             // 1. Listen for Team Members (Public/Shared data)
             onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
                 window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Team members updated from Firestore:", window.teamMembers.length);
                 updateAll();
             }, (error) => console.error("Error fetching team members:", error));
             
             // 2. Listen for Contacts (Public/Shared data)
             onSnapshot(getPublicCollectionRef('contacts'), (snapshot) => {
                 window.contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Contacts updated from Firestore:", window.contacts.length);
                 updateAll();
             }, (error) => console.error("Error fetching contacts:", error));
 
             // 3. Listen for Projection History (User-specific private data)
             onSnapshot(getPrivateCollectionRef('projectionHistory'), (snapshot) => {
                 window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
-                console.log("Projection history loaded:", window.projectionHistory.length);
-                // Also load the last saved goal
+                
                 const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
                 if (lastHistory && lastHistory.goal) {
                     window.votesGoal = lastHistory.goal;
@@ -437,14 +422,20 @@
             }, (error) => console.error("Error fetching history:", error));
         }
 
-        // --- FIRESTORE ACTIONS (Replacing saveToLocalStorage) ---
+        // --- FIRESTORE ACTIONS ---
         async function saveContact(contact) {
             if (!db) return;
-            // Use setDoc to create/overwrite a specific document ID
             const contactRef = doc(getPublicCollectionRef('contacts'), contact.id);
             try {
-                await setDoc(contactRef, contact);
-                console.log("Contact saved:", contact.id);
+                // Ensure null values are used instead of empty strings for non-required fields in Firestore
+                const dataToSave = {
+                    ...contact,
+                    numeroTelephone: contact.numeroTelephone || null,
+                    assignedTo: contact.assignedTo || null,
+                    controlledByMemberId: contact.controlledByMemberId || null,
+                    controlledByMemberName: contact.controlledByMemberName || null,
+                };
+                await setDoc(contactRef, dataToSave);
             } catch (e) {
                 console.error("Error saving document:", e);
             }
@@ -455,28 +446,15 @@
             const contactRef = doc(getPublicCollectionRef('contacts'), contactId);
             try {
                 await deleteDoc(contactRef);
-                console.log("Contact deleted:", contactId);
             } catch (e) {
                 console.error("Error deleting document:", e);
-            }
-        }
-
-        async function saveTeamMember(member) {
-            if (!db) return;
-            const memberRef = doc(getPublicCollectionRef('teamMembers'), member.id);
-            try {
-                await setDoc(memberRef, member);
-            } catch (e) {
-                console.error("Error saving team member:", e);
             }
         }
 
         async function addTeamMember(name) {
              if (!db) return;
              try {
-                 // Firestore automatically generates the ID (which we'll use as the member ID)
                  const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), { name: name });
-                 // The onSnapshot listener will update the state automatically
                  return newDoc.id; 
              } catch (e) {
                  console.error("Error adding team member:", e);
@@ -604,7 +582,9 @@
             const birthdayListEl = document.getElementById('birthday-list');
             birthdayListEl.innerHTML = upcomingBirthdays.length > 0
                 ? upcomingBirthdays.map(c => {
-                    const [day, month, year] = c.dateNaissance.split('/');
+                    const parts = c.dateNaissance.split('/');
+                    if(parts.length < 3) return '';
+                    const [day, month, year] = parts;
                     const age = today.getFullYear() - parseInt(year, 10);
                     return `<div class="flex justify-between items-center text-sm">
                                 <p class="font-medium text-gray-800">${c.prenoms} ${c.nomUsage}</p>
@@ -614,7 +594,7 @@
                 : '<p class="text-gray-500">Aucun anniversaire dans les 30 prochains jours.</p>';
         }
 
-        // --- CONTACTS MANAGEMENT (renderContacts, handleAssignContact, handleDeleteContact, search) ---
+        // --- CONTACTS MANAGEMENT ---
         window.renderContacts = function(filteredContacts = null) {
             const tableBody = document.getElementById('contacts-table-body');
             tableBody.innerHTML = '';
@@ -624,7 +604,6 @@
 
             contactsToRender.forEach(contact => {
                 const row = document.createElement('tr');
-                // Re-create the options HTML for each contact to set 'selected' status correctly
                 const contactTeamOptions = window.teamMembers.map(tm => 
                     `<option value="${tm.id}" ${contact.assignedTo == tm.id ? 'selected' : ''}>${tm.name}</option>`
                 ).join('');
@@ -654,11 +633,10 @@
         
         function handleAssignContact(event) {
             const contactId = event.target.dataset.id;
-            const newMemberId = event.target.value; // ID is now a string from Firestore
+            const newMemberId = event.target.value; 
             const contact = window.contacts.find(c => c.id == contactId);
 
             if (contact) {
-                // Create a mutable copy for update
                 const contactToUpdate = {...contact};
                 contactToUpdate.assignedTo = newMemberId || null;
                 saveContact(contactToUpdate);
@@ -667,9 +645,10 @@
 
         function handleDeleteContact(event) {
             const contactId = event.target.dataset.id;
-            // IMPORTANT: Never use confirm() in the final version! This is a temporary placeholder.
+            
+            // Placeholder for custom modal UI (replacing alert/confirm)
             if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
-                deleteContact(contactId); // Delete from Firestore
+                deleteContact(contactId); 
             }
         }
 
@@ -707,7 +686,7 @@
         function handleAddTeamMember() {
             const input = document.getElementById('new-team-member');
             if (input.value.trim()) {
-                addTeamMember(input.value.trim()); // Add to Firestore
+                addTeamMember(input.value.trim()); 
                 input.value = '';
             }
         }
@@ -715,23 +694,21 @@
         function handleDeleteTeamMember(event) {
             const memberId = event.target.dataset.id;
             
-            // IMPORTANT: Never use confirm() in the final version! This is a temporary placeholder.
+            // Placeholder for custom modal UI (replacing alert/confirm)
             if(window.confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
                 
-                // Note: We don't need to await here, saving contacts runs in parallel
                 window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
-                    // Create a mutable copy for update
                     const contactToUpdate = {...c};
                     if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
                     if(contactToUpdate.controlledByMemberId === memberId) {
                         contactToUpdate.controlledByMemberId = null;
                         contactToUpdate.controlledByMemberName = null;
-                        contactToUpdate.numeroTelephone = ''; 
+                        contactToUpdate.numeroTelephone = null; 
                     }
-                    saveContact(contactToUpdate); // Update contact in Firestore
+                    saveContact(contactToUpdate); 
                 });
                 
-                deleteTeamMember(memberId); // Delete member from Firestore
+                deleteTeamMember(memberId); 
             }
         }
 
@@ -746,6 +723,8 @@
 
             tableBody.innerHTML = '';
             const assigned = window.contacts.filter(c => c.assignedTo == memberId);
+            const actingMember = window.teamMembers.find(m => m.id === memberId); // Current member viewing the list
+            if (!actingMember) return; 
             
             assigned.forEach(contact => {
                 const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId != memberId;
@@ -761,7 +740,7 @@
                     <!-- PHONE NUMBER INPUT (Control mechanism) -->
                     <td class="px-6 py-4 text-sm text-gray-500 relative min-w-[150px]">
                         <input type="tel" data-id="${contact.id}" data-member-id="${memberId}" class="phone-input w-full rounded-md border-gray-300 shadow-sm text-xs px-2 py-1 focus:ring-blue-500 focus:border-blue-500" value="${contact.numeroTelephone || ''}" placeholder="Numéro (Contrôle)" ${phoneInputDisabled}>
-                        ${isControlledByAnother ? `<span class="controlled-message">Géré par ${contact.controlledByMemberName}.</span>` : ''}
+                        ${isControlledByAnother ? `<span class="controlled-message">Géré par ${contact.controlledByMemberName || 'un autre membre'}.</span>` : ''}
                     </td>
 
                     <!-- Status Select -->
@@ -788,36 +767,28 @@
 
             const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId !== actingMemberId;
             
-            // 1. Check for conflict if trying to modify/add a number
             if (isControlledByAnother) {
-                // Revert the input value
                 event.target.value = contact.numeroTelephone || ''; 
-                
-                // Show temporary message (since we can't use alert)
                 const messageSpan = document.createElement('span');
                 messageSpan.className = 'controlled-message';
                 messageSpan.textContent = `Géré par ${contact.controlledByMemberName}.`;
                 event.target.parentElement.appendChild(messageSpan);
-                
                 setTimeout(() => { messageSpan.remove(); }, 4000);
                 return; 
             }
             
-            // Create a mutable copy for update
             const contactToUpdate = {...contact};
 
-            // 2. Take/Maintain Control and update phone number
             if (newPhoneNumber.length > 0) {
                 contactToUpdate.numeroTelephone = newPhoneNumber;
                 contactToUpdate.controlledByMemberId = actingMemberId;
                 contactToUpdate.controlledByMemberName = actingMember.name;
             } else {
-                // Phone number is being cleared -> release control
                 contactToUpdate.numeroTelephone = null;
                 contactToUpdate.controlledByMemberId = null;
                 contactToUpdate.controlledByMemberName = null;
             }
-            saveContact(contactToUpdate); // Save to Firestore
+            saveContact(contactToUpdate); 
         }
 
         function handleTeamStatusChange(event) {
@@ -825,12 +796,10 @@
             if (contact) {
                  const contactToUpdate = {...contact};
                 contactToUpdate.status = event.target.value;
-                // If status is "A voté", force checkbox check and save
                 if(contactToUpdate.status === 'A voté') {
-                    // Update checkbox to match
                     document.querySelector(`.voted-checkbox[data-id="${contact.id}"]`).checked = true;
                 }
-                saveContact(contactToUpdate); // Save to Firestore
+                saveContact(contactToUpdate); 
             }
         }
 
@@ -838,11 +807,9 @@
              const contact = window.contacts.find(c => c.id == event.target.dataset.id);
              if (contact) {
                 const contactToUpdate = {...contact};
-                // If checked, status is 'A voté'. If unchecked, status goes back to 'Acquis' (or previous status, but Acquis is safer default)
                 contactToUpdate.status = event.target.checked ? 'A voté' : 'Acquis';
-                // Update the status select dropdown to match
                 document.querySelector(`.team-status-select[data-id="${contact.id}"]`).value = contactToUpdate.status;
-                saveContact(contactToUpdate); // Save to Firestore
+                saveContact(contactToUpdate); 
              }
         }
         document.getElementById('add-team-member-btn').addEventListener('click', handleAddTeamMember);
@@ -860,14 +827,12 @@
 
         async function processCSV(csvText) {
             if (!db) {
-                // IMPORTANT: Never use alert() in the final version! This is a temporary placeholder.
                 window.alert("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
                 return;
             }
             
             const lines = csvText.split(/\r\n|\n/).slice(1);
             const newContacts = lines.filter(line => line.trim() !== '').map((line) => {
-                // Simple split by comma or semicolon, handling quotes
                 const data = line.split(/[;,]/).map(d => d.trim().replace(/"/g, ''));
                  const contact = {
                     status: 'À contacter', 
@@ -877,7 +842,7 @@
                     dateNaissance: data[3] || '', // Assuming format DD/MM/YYYY
                     email: data[9] || '', 
                     assignedTo: null,
-                    numeroTelephone: null, // Use null for empty number
+                    numeroTelephone: null, 
                     controlledByMemberId: null,
                     controlledByMemberName: null
                 };
@@ -885,19 +850,16 @@
                 return contact;
             }).filter(c => c.nomUsage || c.prenoms);
             
-            // IMPORTANT: Never use confirm() in the final version! This is a temporary placeholder.
             if (window.confirm(`Importer ${newContacts.length} nouveaux contacts ?`)) {
                 let importedCount = 0;
                 for (const contact of newContacts) {
                     try {
-                        // Use addDoc to create a new document with an auto-generated ID
                         await addDoc(getPublicCollectionRef('contacts'), contact);
                         importedCount++;
                     } catch (e) {
                         console.error("Erreur lors de l'importation d'un contact:", e);
                     }
                 }
-                // IMPORTANT: Never use alert() in the final version! This is a temporary placeholder.
                 window.alert(`${importedCount} contacts importés.`);
                 document.getElementById('csv-file-input').value = '';
             }
@@ -910,13 +872,12 @@
             const turnout = parseFloat(document.getElementById('turnout').value);
             const numLists = parseInt(document.getElementById('num-lists').value);
             const objectiveSeats = parseInt(document.getElementById('objective-seats').value);
-            const SEATS_TO_FILL = 5; // Assuming 5 seats based on typical consular elections
+            const SEATS_TO_FILL = 5; 
 
             if (isNaN(totalInscrits) || isNaN(turnout) || isNaN(numLists) || numLists < 1 || isNaN(objectiveSeats)) return;
 
             const statusCounts = window.contacts.reduce((acc, c) => ({...acc, [c.status]: (acc[c.status] || 0) + 1 }), {});
             
-            // Calculation of our projected votes
             const ourVotes = Math.round(
                 (statusCounts['A voté'] || 0) + (statusCounts['Acquis'] || 0) * 1 +
                 (statusCounts['Probable'] || 0) * 0.7 + (statusCounts['À convaincre'] || 0) * 0.2
@@ -925,10 +886,8 @@
             const totalVotants = Math.round(totalInscrits * (turnout / 100));
             const quotient = Math.floor(totalVotants / SEATS_TO_FILL);
             
-            // Update votesGoal based on the projection
             window.votesGoal = quotient > 0 ? quotient : 1000;
             
-            // Record history (saved to user's private collection)
             const historyEntry = { 
                 timestamp: Date.now(), 
                 counts: statusCounts, 
@@ -946,13 +905,11 @@
                 const baseVote = otherVotes / numRivalLists;
                 let simulatedTotal = 0;
                 for (let i = 1; i < numLists; i++) {
-                    // Introduce random variance
                     const variance = baseVote * (0.8 + Math.random() * 0.4); 
                     allLists.push({ name: `Liste Adverse ${i}`, votes: Math.round(variance), seats: 0 });
                     simulatedTotal += Math.round(variance);
                 }
                 
-                // Final re-normalization to match totalVotants exactly (optional but cleaner)
                 const totalSimulated = allLists.reduce((sum, list) => sum + list.votes, 0);
                 if(totalSimulated !== totalVotants) {
                     const factor = totalVotants / totalSimulated;
@@ -961,9 +918,9 @@
             }
             
             let seatsAttributed = 0, stepLog = '';
-            let currentAllLists = JSON.parse(JSON.stringify(allLists)); // Deep copy for D'Hondt simulation
+            let currentAllLists = JSON.parse(JSON.stringify(allLists)); 
             
-            // 1. Attribution au quotient (La Haine)
+            // 1. Attribution au quotient
             if (quotient > 0) {
                 currentAllLists.forEach(list => {
                     const seatsWon = Math.floor(list.votes / quotient);
@@ -979,7 +936,6 @@
                 let maxAvg = -1;
 
                 currentAllLists.forEach(list => {
-                    // D'Hondt formula: Votes / (Seats + 1)
                     const currentAvg = list.votes / (list.seats + 1); 
                     if (currentAvg > maxAvg) {
                         maxAvg = currentAvg;
@@ -1027,7 +983,6 @@
                 </details>
             `;
             
-            // Re-run updateAll to refresh goal progress bar
             updateAll();
         }
 
@@ -1072,7 +1027,7 @@
         
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
-            initializeFirebase(); // Start the Firebase process
+            initializeFirebase(); 
 
             // Initial navigation setup
             const views = {
@@ -1089,7 +1044,6 @@
                 document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active', 'bg-blue-600'));
                 document.getElementById(`nav-${viewName}`).classList.add('active', 'bg-blue-600');
                 
-                // Ensure correct rendering when switching to specific views
                 if (viewName === 'team') window.renderTeamView();
                 if (viewName === 'projections') window.updateHistoryChart();
             }
