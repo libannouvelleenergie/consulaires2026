@@ -278,9 +278,27 @@
         let db;
         let auth;
         let userId = 'anonymous'; // Default until authenticated
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // *******************************************************************
+        // VOTRE CONFIGURATION FIREBASE - MISE À JOUR (ÉTAPE 2)
+        // *******************************************************************
+        
+        // L'ID de l'application est utilisé pour définir le chemin des collections dans Firestore
+        const appId = '1:872950170067:web:dc23cc105538d3e88baf26';
+        
+        // VOTRE OBJET DE CONFIGURATION COMPLET COPIÉ DEPUIS LA CONSOLE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
+            authDomain: "elecmanager-6f50a.firebaseapp.com",
+            projectId: "elecmanager-6f50a",
+            storageBucket: "elecmanager-6f50a.firebasestorage.app",
+            messagingSenderId: "872950170067",
+            appId: "1:872950170067:web:dc23cc105538d3e88baf26",
+            measurementId: "G-GXP88CTD96"
+        };
+        
+        // Cet initialAuthToken est uniquement pour l'environnement Canvas, il doit être null pour le déploiement local
+        const initialAuthToken = null; 
 
         // --- GLOBAL STATE ---
         window.contacts = [];
@@ -288,6 +306,7 @@
         window.projectionHistory = [];
         window.votesGoal = 1000;
         window.isAuthReady = false; // Flag to ensure listeners start only after auth
+        let historyChartInstance = null; // Instance for the evolution chart
 
         const STATUS_OPTIONS = {
             'À contacter': 'À contacter', 'À convaincre': 'À convaincre', 'Probable': 'Probable',
@@ -306,11 +325,6 @@
         
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
-            if (!firebaseConfig) {
-                console.error("Firebase config not found. Running in demo mode (no persistence).");
-                return;
-            }
-
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -323,6 +337,7 @@
                     const userCredential = await signInWithCustomToken(auth, initialAuthToken);
                     user = userCredential.user;
                 } else {
+                    // Pour votre déploiement local, nous utilisons l'authentification anonyme par défaut
                     const userCredential = await signInAnonymously(auth);
                     user = userCredential.user;
                 }
@@ -358,11 +373,13 @@
         // --- FIRESTORE UTILS ---
         // Public collection path for collaborative team data
         function getPublicCollectionRef(collectionName) {
+            // Note: Since we are not using the standard __app_id variable, we use the hardcoded appId for public collections
             return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
         }
         
         // Private collection for user-specific data (e.g., projection history)
         function getPrivateCollectionRef(collectionName) {
+            // Note: Since we are not using the standard __app_id variable, we use the hardcoded appId for private collections
             return collection(db, 'artifacts', appId, 'users', userId, collectionName);
         }
 
@@ -370,14 +387,14 @@
         function setupFirestoreListeners() {
             if (!db || !window.isAuthReady) return;
 
-            // 1. Listen for Team Members
+            // 1. Listen for Team Members (Public/Shared data)
             onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
                 window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log("Team members updated from Firestore:", window.teamMembers.length);
                 updateAll();
             }, (error) => console.error("Error fetching team members:", error));
             
-            // 2. Listen for Contacts
+            // 2. Listen for Contacts (Public/Shared data)
             onSnapshot(getPublicCollectionRef('contacts'), (snapshot) => {
                 window.contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log("Contacts updated from Firestore:", window.contacts.length);
@@ -400,6 +417,7 @@
         // --- FIRESTORE ACTIONS (Replacing saveToLocalStorage) ---
         async function saveContact(contact) {
             if (!db) return;
+            // Use setDoc to create/overwrite a specific document ID
             const contactRef = doc(getPublicCollectionRef('contacts'), contact.id);
             try {
                 await setDoc(contactRef, contact);
@@ -468,6 +486,9 @@
             window.updateDashboard();
             if (!document.getElementById('team-view').classList.contains('hidden')) {
                 window.renderTeamView();
+            }
+             if (!document.getElementById('projections-view').classList.contains('hidden')) {
+                window.updateHistoryChart();
             }
         }
         
@@ -575,11 +596,15 @@
             const tableBody = document.getElementById('contacts-table-body');
             tableBody.innerHTML = '';
             const contactsToRender = filteredContacts || window.contacts;
-            const teamMembersMap = window.teamMembers.reduce((acc, m) => ({...acc, [m.id]: m.name}), {});
+            
+            const teamMembersOptions = window.teamMembers.map(tm => `<option value="${tm.id}">${tm.name}</option>`).join('');
 
             contactsToRender.forEach(contact => {
                 const row = document.createElement('tr');
-                const teamMemberOptions = window.teamMembers.map(tm => `<option value="${tm.id}" ${contact.assignedTo == tm.id ? 'selected' : ''}>${tm.name}</option>`).join('');
+                // Re-create the options HTML for each contact to set 'selected' status correctly
+                const contactTeamOptions = window.teamMembers.map(tm => 
+                    `<option value="${tm.id}" ${contact.assignedTo == tm.id ? 'selected' : ''}>${tm.name}</option>`
+                ).join('');
 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance}</td>
@@ -590,7 +615,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
                          <select data-id="${contact.id}" class="assign-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-xs">
                             <option value="">Non assigné</option>
-                            ${teamMemberOptions}
+                            ${contactTeamOptions}
                         </select>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -610,14 +635,17 @@
             const contact = window.contacts.find(c => c.id == contactId);
 
             if (contact) {
-                contact.assignedTo = newMemberId || null;
-                saveContact(contact);
+                // Create a mutable copy for update
+                const contactToUpdate = {...contact};
+                contactToUpdate.assignedTo = newMemberId || null;
+                saveContact(contactToUpdate);
             }
         }
 
         function handleDeleteContact(event) {
             const contactId = event.target.dataset.id;
-            if (confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
+            // IMPORTANT: Never use confirm() in the final version! This is a temporary placeholder.
+            if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
                 deleteContact(contactId); // Delete from Firestore
             }
         }
@@ -645,7 +673,8 @@
 
             window.teamMembers.forEach(member => {
                 teamSelect.innerHTML += `<option value="${member.id}" ${selectedMemberId === member.id ? 'selected' : ''}>${member.name}</option>`;
-                teamListDiv.innerHTML += `<div class="flex justify-between items-center text-sm p-2 bg-gray-50 rounded"><span>${member.name}</span><button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold">X</button></div>`;
+                const assignedCount = window.contacts.filter(c => c.assignedTo === member.id).length;
+                teamListDiv.innerHTML += `<div class="flex justify-between items-center text-sm p-2 bg-gray-50 rounded"><span>${member.name} (${assignedCount} contacts)</span><button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold ml-4">X</button></div>`;
             });
             
             document.querySelectorAll('.delete-member-btn').forEach(btn => btn.addEventListener('click', handleDeleteTeamMember));
@@ -663,16 +692,20 @@
         function handleDeleteTeamMember(event) {
             const memberId = event.target.dataset.id;
             
-            if(confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
-                // Remove all assigned/controlled statuses from contacts before deleting member
+            // IMPORTANT: Never use confirm() in the final version! This is a temporary placeholder.
+            if(window.confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
+                
+                // Note: We don't need to await here, saving contacts runs in parallel
                 window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
-                    if(c.assignedTo === memberId) c.assignedTo = null; 
-                    if(c.controlledByMemberId === memberId) {
-                        c.controlledByMemberId = null;
-                        c.controlledByMemberName = null;
-                        c.numeroTelephone = ''; 
+                    // Create a mutable copy for update
+                    const contactToUpdate = {...c};
+                    if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
+                    if(contactToUpdate.controlledByMemberId === memberId) {
+                        contactToUpdate.controlledByMemberId = null;
+                        contactToUpdate.controlledByMemberName = null;
+                        contactToUpdate.numeroTelephone = ''; 
                     }
-                    saveContact(c); // Update contact in Firestore
+                    saveContact(contactToUpdate); // Update contact in Firestore
                 });
                 
                 deleteTeamMember(memberId); // Delete member from Firestore
@@ -702,7 +735,7 @@
                     <td class="px-6 py-4 text-sm font-medium text-gray-900">${contact.nomUsage}</td>
                     <td class="px-6 py-4 text-sm text-gray-500">${contact.prenoms}</td>
                     
-                    <!-- NEW PHONE NUMBER INPUT (Control mechanism) -->
+                    <!-- PHONE NUMBER INPUT (Control mechanism) -->
                     <td class="px-6 py-4 text-sm text-gray-500 relative min-w-[150px]">
                         <input type="tel" data-id="${contact.id}" data-member-id="${memberId}" class="phone-input w-full rounded-md border-gray-300 shadow-sm text-xs px-2 py-1 focus:ring-blue-500 focus:border-blue-500" value="${contact.numeroTelephone || ''}" placeholder="Numéro (Contrôle)" ${phoneInputDisabled}>
                         ${isControlledByAnother ? `<span class="controlled-message">Géré par ${contact.controlledByMemberName}.</span>` : ''}
@@ -734,47 +767,51 @@
             
             // 1. Check for conflict if trying to modify/add a number
             if (isControlledByAnother) {
-                // Show message and revert the input value (Firestore sync will also revert if the user tried to force it)
+                // Revert the input value
                 event.target.value = contact.numeroTelephone || ''; 
                 
-                // Temporary visual feedback
+                // Show temporary message (since we can't use alert)
                 const messageSpan = document.createElement('span');
                 messageSpan.className = 'controlled-message';
-                messageSpan.textContent = `Ce contact est géré par ${contact.controlledByMemberName}.`;
+                messageSpan.textContent = `Géré par ${contact.controlledByMemberName}.`;
                 event.target.parentElement.appendChild(messageSpan);
                 
                 setTimeout(() => { messageSpan.remove(); }, 4000);
                 return; 
             }
             
+            // Create a mutable copy for update
+            const contactToUpdate = {...contact};
+
             // 2. Take/Maintain Control and update phone number
             if (newPhoneNumber.length > 0) {
-                contact.numeroTelephone = newPhoneNumber;
-                contact.controlledByMemberId = actingMemberId;
-                contact.controlledByMemberName = actingMember.name;
+                contactToUpdate.numeroTelephone = newPhoneNumber;
+                contactToUpdate.controlledByMemberId = actingMemberId;
+                contactToUpdate.controlledByMemberName = actingMember.name;
             } else {
                 // Phone number is being cleared -> release control
-                contact.numeroTelephone = '';
-                contact.controlledByMemberId = null;
-                contact.controlledByMemberName = null;
+                contactToUpdate.numeroTelephone = '';
+                contactToUpdate.controlledByMemberId = null;
+                contactToUpdate.controlledByMemberName = null;
             }
-            saveContact(contact); // Save to Firestore
-            // onSnapshot will handle the updateAll call
+            saveContact(contactToUpdate); // Save to Firestore
         }
 
         function handleTeamStatusChange(event) {
             const contact = window.contacts.find(c => c.id == event.target.dataset.id);
             if (contact) {
-                contact.status = event.target.value;
-                saveContact(contact); // Save to Firestore
+                 const contactToUpdate = {...contact};
+                contactToUpdate.status = event.target.value;
+                saveContact(contactToUpdate); // Save to Firestore
             }
         }
 
         function handleVotedChange(event) {
              const contact = window.contacts.find(c => c.id == event.target.dataset.id);
              if (contact) {
-                contact.status = event.target.checked ? 'A voté' : 'Acquis';
-                saveContact(contact); // Save to Firestore
+                const contactToUpdate = {...contact};
+                contactToUpdate.status = event.target.checked ? 'A voté' : 'Acquis';
+                saveContact(contactToUpdate); // Save to Firestore
              }
         }
         document.getElementById('add-team-member-btn').addEventListener('click', handleAddTeamMember);
@@ -792,19 +829,21 @@
 
         async function processCSV(csvText) {
             if (!db) {
-                alert("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
+                // IMPORTANT: Never use alert() in the final version! This is a temporary placeholder.
+                window.alert("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
                 return;
             }
             
             const lines = csvText.split(/\r\n|\n/).slice(1);
             const newContacts = lines.filter(line => line.trim() !== '').map((line) => {
+                // Simple split by comma or semicolon, handling quotes
                 const data = line.split(/[;,]/).map(d => d.trim().replace(/"/g, ''));
                  const contact = {
                     status: 'À contacter', 
                     nomNaissance: data[0] || '', 
                     nomUsage: data[1] || '',
                     prenoms: data[2] || '', 
-                    dateNaissance: data[3] || '', 
+                    dateNaissance: data[3] || '', // Assuming format DD/MM/YYYY
                     email: data[9] || '', 
                     assignedTo: null,
                     numeroTelephone: '', 
@@ -815,7 +854,8 @@
                 return contact;
             }).filter(c => c.nomUsage || c.prenoms);
             
-            if (confirm(`Importer ${newContacts.length} nouveaux contacts ?`)) {
+            // IMPORTANT: Never use confirm() in the final version! This is a temporary placeholder.
+            if (window.confirm(`Importer ${newContacts.length} nouveaux contacts ?`)) {
                 let importedCount = 0;
                 for (const contact of newContacts) {
                     try {
@@ -826,9 +866,9 @@
                         console.error("Erreur lors de l'importation d'un contact:", e);
                     }
                 }
-                alert(`${importedCount} contacts importés.`);
+                // IMPORTANT: Never use alert() in the final version! This is a temporary placeholder.
+                window.alert(`${importedCount} contacts importés.`);
                 document.getElementById('csv-file-input').value = '';
-                // The onSnapshot listener will call updateAll()
             }
         }
         
@@ -839,12 +879,13 @@
             const turnout = parseFloat(document.getElementById('turnout').value);
             const numLists = parseInt(document.getElementById('num-lists').value);
             const objectiveSeats = parseInt(document.getElementById('objective-seats').value);
-            const SEATS_TO_FILL = 5;
+            const SEATS_TO_FILL = 5; // Assuming 5 seats based on typical consular elections
 
             if (isNaN(totalInscrits) || isNaN(turnout) || isNaN(numLists) || numLists < 1 || isNaN(objectiveSeats)) return;
 
             const statusCounts = window.contacts.reduce((acc, c) => ({...acc, [c.status]: (acc[c.status] || 0) + 1 }), {});
             
+            // Calculation of our projected votes
             const ourVotes = Math.round(
                 (statusCounts['A voté'] || 0) + (statusCounts['Acquis'] || 0) * 1 +
                 (statusCounts['Probable'] || 0) * 0.7 + (statusCounts['À convaincre'] || 0) * 0.2
@@ -857,29 +898,43 @@
             window.votesGoal = quotient > 0 ? quotient : 1000;
             
             // Record history (saved to user's private collection)
-            const historyEntry = { timestamp: Date.now(), counts: statusCounts, goal: window.votesGoal };
+            const historyEntry = { 
+                timestamp: Date.now(), 
+                counts: statusCounts, 
+                goal: window.votesGoal,
+                ourVotes: ourVotes 
+            };
             await addProjectionHistory(historyEntry);
-            // onSnapshot will handle the updateAll call
 
             let allLists = [{ name: "Votre Liste", votes: ourVotes, seats: 0 }];
             const otherVotes = totalVotants > ourVotes ? totalVotants - ourVotes : 0;
+            
+            // Simulate rival lists (adjusting votes so total equals totalVotants)
             if (numLists > 1) {
-                const avgOtherVotes = otherVotes / (numLists - 1);
+                const numRivalLists = numLists - 1;
+                const baseVote = otherVotes / numRivalLists;
+                let simulatedTotal = 0;
                 for (let i = 1; i < numLists; i++) {
-                    allLists.push({ name: `Liste Adverse ${i}`, votes: Math.round(avgOtherVotes * (0.8 + Math.random() * 0.4)), seats: 0 });
+                    // Introduce random variance
+                    const variance = baseVote * (0.8 + Math.random() * 0.4); 
+                    allLists.push({ name: `Liste Adverse ${i}`, votes: Math.round(variance), seats: 0 });
+                    simulatedTotal += Math.round(variance);
                 }
+                
+                // Final re-normalization to match totalVotants exactly (optional but cleaner)
                 const totalSimulated = allLists.reduce((sum, list) => sum + list.votes, 0);
-                if(totalSimulated > 0 && totalSimulated !== totalVotants) {
+                if(totalSimulated !== totalVotants) {
                     const factor = totalVotants / totalSimulated;
                     allLists.forEach(list => list.votes = Math.round(list.votes * factor));
                 }
             }
             
             let seatsAttributed = 0, stepLog = '';
+            let currentAllLists = JSON.parse(JSON.stringify(allLists)); // Deep copy for D'Hondt simulation
             
-            // 1. Attribution au quotient
+            // 1. Attribution au quotient (La Haine)
             if (quotient > 0) {
-                allLists.forEach(list => {
+                currentAllLists.forEach(list => {
                     const seatsWon = Math.floor(list.votes / quotient);
                     list.seats += seatsWon;
                     seatsAttributed += seatsWon;
@@ -889,142 +944,132 @@
             
             // 2. Attribution à la plus forte moyenne (D'Hondt) pour les sièges restants
             while(seatsAttributed < SEATS_TO_FILL) {
-                const bestList = allLists.reduce((best, current) => {
-                    const currentAvg = current.votes / (current.seats + 1);
-                    return currentAvg > (best ? best.avg : -1) ? { list: current, avg: currentAvg } : best;
-                }, null);
-                if (bestList && bestList.avg > 0) {
-                    bestList.list.seats++;
+                let bestList = null;
+                let maxAvg = -1;
+
+                currentAllLists.forEach(list => {
+                    // D'Hondt formula: Votes / (Seats + 1)
+                    const currentAvg = list.votes / (list.seats + 1); 
+                    if (currentAvg > maxAvg) {
+                        maxAvg = currentAvg;
+                        bestList = list;
+                    }
+                });
+
+                if (bestList && maxAvg > 0) {
+                    bestList.seats++;
                     seatsAttributed++;
-                    stepLog += `<li><strong>Tour plus forte moyenne :</strong> ${bestList.list.name} obtient 1 siège (moyenne: ${Math.round(bestList.avg).toLocaleString()}).</li>`;
+                    stepLog += `<li><strong>Tour forte moyenne :</strong> ${bestList.name} obtient 1 siège (Moyenne: ${Math.round(maxAvg).toLocaleString()}).</li>`;
                 } else break;
             }
             
-            const ourResult = allLists.find(l => l.name === "Votre Liste");
+            const ourResult = currentAllLists.find(l => l.name === "Votre Liste");
             const isObjectiveMet = ourResult.seats >= objectiveSeats;
+            const resultColor = isObjectiveMet ? 'text-green-600' : 'text-red-600';
             
             document.getElementById('projection-results').innerHTML = `
-                <h3 class="text-lg font-semibold text-gray-800">Synthèse</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Synthèse de la Projection</h3>
                 <div class="grid grid-cols-2 gap-4 mb-6 text-center">
-                    <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Total Votants</p><p class="text-2xl font-bold">${totalVotants.toLocaleString()}</p></div>
+                    <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Total Votants Estimé</p><p class="text-2xl font-bold">${totalVotants.toLocaleString()}</p></div>
                     <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Quotient Électoral</p><p class="text-2xl font-bold">${quotient > 0 ? quotient.toLocaleString() : 'N/A'}</p></div>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Répartition finale des sièges</h3>
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Liste</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Votes</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sièges</th></tr></thead>
-                    <tbody>${allLists.sort((a, b) => b.votes - a.votes).map(list => `<tr class="${list.name === 'Votre Liste' ? 'bg-blue-100 font-bold' : ''}"><td class="px-4 py-2">${list.name}</td><td class="px-4 py-2">${list.votes.toLocaleString()}</td><td class="px-4 py-2">${list.seats}</td></tr>`).join('')}</tbody>
-                </table>
-                <div class="mt-6 p-4 border-l-4 ${isObjectiveMet ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}">
-                    <p class="font-bold ${isObjectiveMet ? 'text-green-800' : 'text-red-800'}">Objectif de ${objectiveSeats} siège(s) ${isObjectiveMet ? 'Atteint !' : 'non atteint.'}</p>
-                    <p class="${isObjectiveMet ? 'text-green-700' : 'text-red-700'}">Avec ces paramètres, votre liste obtiendrait ${ourResult.seats} siège(s).</p>
+                
+                <p class="text-xl font-bold ${resultColor} mb-4 text-center">Objectif de ${objectiveSeats} siège(s) : ${isObjectiveMet ? 'ATTEINT' : 'NON ATTEINT'}</p>
+
+                <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Répartition finale des sièges (Méthode D'Hondt)</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Liste</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Votes Projetés</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sièges Obtenus</th></tr></thead>
+                        <tbody>${currentAllLists.sort((a,b) => b.votes - a.votes).map(l => 
+                            `<tr class="${l.name === 'Votre Liste' ? 'bg-blue-50 font-semibold' : ''}">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">${l.name}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${l.votes.toLocaleString()}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${l.seats}</td>
+                            </tr>`
+                        ).join('')}</tbody>
+                    </table>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Détail de l'attribution</h3><ul class="list-disc pl-5 space-y-1 text-sm text-gray-600">${stepLog}</ul>`;
 
-            // Render Summary Table
-            let summaryTableHTML = `<h3 class="text-xl font-bold text-gray-800 my-4">Projection des Voix Minimum Estimées par Siège</h3>`;
-            if (quotient > 0) {
-                summaryTableHTML += `<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50"><tr>
-                        <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase">Projections (voix)</th>
-                        ${Array.from({length: 5}, (_, i) => `<th class="px-2 py-2 text-center font-medium text-gray-500 uppercase">Siège ${i + 1}</th>`).join('')}
-                    </tr></thead>
-                    <tbody class="bg-white divide-y divide-gray-200">`;
-
-                const rows = {
-                    'Estimation centrale': (est, tot) => est.toLocaleString(),
-                    'Fourchette min (x0.8)': (est, tot) => Math.round(est * 0.8).toLocaleString(),
-                    'Fourchette max (x1.2)': (est, tot) => Math.round(est * 1.2).toLocaleString(),
-                    'Part des voix (%)': (est, tot) => `${(est / tot * 100).toFixed(1)}%`,
-                };
-
-                for (const [label, formatFn] of Object.entries(rows)) {
-                    summaryTableHTML += `<tr><td class="px-2 py-2 font-medium text-gray-900">${label}</td>`;
-                    for (let i = 1; i <= 5; i++) {
-                        const estimation = i * quotient;
-                        const cellValue = formatFn(estimation, totalVotants);
-                        summaryTableHTML += `<td class="px-2 py-2 text-center">${cellValue}</td>`;
-                    }
-                    summaryTableHTML += `</tr>`;
-                }
-                summaryTableHTML += `<tr><td class="px-2 py-2 font-medium text-gray-900">Fourchette complète (min–max)</td>`;
-                 for (let i = 1; i <= 5; i++) {
-                     const estimation = i * quotient;
-                     const min = Math.round(estimation * 0.8 * 10) / 10;
-                     const max = Math.round(estimation * 1.2 * 10) / 10;
-                     summaryTableHTML += `<td class="px-2 py-2 text-center">${min.toLocaleString('fr-FR')} – ${max.toLocaleString('fr-FR')}</td>`;
-                 }
-                summaryTableHTML += `</tr>`;
-
-                summaryTableHTML += `</tbody></table></div>`;
-            } else {
-                summaryTableHTML += `<p class="text-gray-500">Le quotient électoral est trop bas pour générer une estimation par siège.</p>`;
-            }
-            document.getElementById('projection-summary-table').innerHTML = summaryTableHTML;
+                <details class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <summary class="font-semibold text-gray-700 cursor-pointer">Détail de l'attribution des sièges</summary>
+                    <ol class="list-disc pl-5 mt-2 text-sm text-gray-600 space-y-1">${stepLog}</ol>
+                </details>
+            `;
+            
+            // Re-run updateAll to refresh goal progress bar
+            updateAll();
         }
 
-        window.renderHistoryChart = function() {
+        window.updateHistoryChart = function() {
             const ctx = document.getElementById('history-chart').getContext('2d');
-            if (window.historyChart) { window.historyChart.destroy(); }
-            if(window.projectionHistory.length === 0) return;
+            const history = window.projectionHistory;
 
-            const labels = window.projectionHistory.map(h => new Date(h.timestamp).toLocaleDateString('fr-FR'));
-            const datasets = Object.keys(STATUS_OPTIONS).map(status => ({
-                label: status,
-                data: window.projectionHistory.map(h => h.counts[status] || 0),
-                borderColor: STATUS_COLORS[status],
-                backgroundColor: STATUS_COLORS[status] + '20',
-                fill: false,
-                tension: 0.1
-            }));
+            if (history.length === 0) {
+                if (historyChartInstance) historyChartInstance.destroy();
+                document.getElementById('history-chart').style.display = 'none';
+                return;
+            }
+             document.getElementById('history-chart').style.display = 'block';
 
-            datasets.push({
-                label: 'Objectif Votes Certains',
-                data: window.projectionHistory.map(h => h.goal),
-                borderColor: '#111827',
-                borderDash: [5, 5],
-                fill: false,
-            });
-            
-            window.historyChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
-            });
+            const data = {
+                labels: history.map((entry, index) => `Proj. ${index + 1} (${new Date(entry.timestamp).toLocaleDateString()})`),
+                datasets: [{
+                    label: 'Votes Projetés',
+                    data: history.map(entry => entry.ourVotes),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            };
+
+            if (historyChartInstance) {
+                historyChartInstance.data = data;
+                historyChartInstance.update();
+            } else {
+                historyChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'top' }, title: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
         }
         
-        // --- INITIALIZATION ON WINDOW LOAD ---
-        window.addEventListener('load', () => {
-             // NAVIGATION SETUP
-            const navLinks = {
-                dashboard: document.getElementById('nav-dashboard'), contacts: document.getElementById('nav-contacts'),
-                team: document.getElementById('nav-team'), projections: document.getElementById('nav-projections')
-            };
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase(); // Start the Firebase process
+
+            // Initial navigation setup
             const views = {
-                dashboard: document.getElementById('dashboard-view'), contacts: document.getElementById('contacts-view'),
-                team: document.getElementById('team-view'), projections: document.getElementById('projections-view')
+                'dashboard': 'dashboard-view',
+                'contacts': 'contacts-view',
+                'team': 'team-view',
+                'projections': 'projections-view'
             };
 
-            function switchView(viewName) {
-                Object.values(views).forEach(v => v.classList.add('hidden'));
-                Object.values(navLinks).forEach(l => l.classList.remove('active'));
-                views[viewName].classList.remove('hidden');
-                navLinks[viewName].classList.add('active');
-                if(viewName === 'team') {
-                    window.renderTeamView();
-                }
-                if (viewName === 'projections') {
-                    window.renderHistoryChart();
-                }
+            function showView(viewName) {
+                Object.values(views).forEach(id => document.getElementById(id).classList.add('hidden'));
+                document.getElementById(views[viewName]).classList.remove('hidden');
+
+                document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active', 'bg-blue-600'));
+                document.getElementById(`nav-${viewName}`).classList.add('active', 'bg-blue-600');
+                
+                // Ensure correct rendering when switching to specific views
+                if (viewName === 'team') window.renderTeamView();
+                if (viewName === 'projections') window.updateHistoryChart();
             }
 
-            navLinks.dashboard.addEventListener('click', (e) => { e.preventDefault(); switchView('dashboard'); });
-            navLinks.contacts.addEventListener('click', (e) => { e.preventDefault(); switchView('contacts'); });
-            navLinks.team.addEventListener('click', (e) => { e.preventDefault(); switchView('team'); });
-            navLinks.projections.addEventListener('click', (e) => { e.preventDefault(); switchView('projections'); });
-            
-            // START FIREBASE
-            initializeFirebase();
-            switchView('dashboard'); // Show dashboard initially with loading indicator
+            document.getElementById('nav-dashboard').addEventListener('click', (e) => { e.preventDefault(); showView('dashboard'); });
+            document.getElementById('nav-contacts').addEventListener('click', (e) => { e.preventDefault(); showView('contacts'); });
+            document.getElementById('nav-team').addEventListener('click', (e) => { e.preventDefault(); showView('team'); });
+            document.getElementById('nav-projections').addEventListener('click', (e) => { e.preventDefault(); showView('projections'); });
+
+            // Default view
+            showView('dashboard');
         });
     </script>
 </body>
