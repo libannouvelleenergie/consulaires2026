@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campagne Électorale Consulaires 2026</title>
+    <title>🗳️ Campagne Électorale Consulaires 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -67,8 +67,9 @@
         <header class="bg-white shadow-md">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-gray-800">Campagne Électorale Consulaires 2026</h1>
-                <div id="user-info" class="text-sm text-gray-500">
+                <div id="user-info" class="text-sm text-gray-500 flex items-center space-x-4">
                     <span class="font-medium text-gray-700">Utilisateur ID:</span> <span id="user-id" class="break-all">...</span>
+                    <span id="team-member-status" class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 hidden"></span>
                 </div>
             </div>
         </header>
@@ -168,9 +169,34 @@
                 <!-- Team View -->
                 <div id="team-view" class="hidden">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-1 bg-white shadow rounded-lg p-6">
-                            <h2 class="text-xl font-bold text-gray-800 mb-4">Gestion de l'Équipe</h2>
-                            <div class="space-y-4">
+                        
+                        <!-- Col 1: Team Management & Login -->
+                        <div class="lg:col-span-1 bg-white shadow rounded-lg p-6 space-y-6">
+                            
+                            <!-- Team Member Login -->
+                            <div class="border-b pb-4 mb-4">
+                                <h2 class="text-xl font-bold text-blue-600 mb-4">Connexion Équipe</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label for="login-team-member-select" class="block text-sm font-medium text-gray-700">Sélectionner votre nom</label>
+                                        <select id="login-team-member-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                            <option value="">-- Sélectionnez un responsable --</option>
+                                        </select>
+                                    </div>
+                                    <div class="relative">
+                                        <label for="auth-key-input" class="block text-sm font-medium text-gray-700">Clé de Connexion Secrète</label>
+                                        <input type="password" id="auth-key-input" placeholder="Entrez la clé..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                        <p id="login-error-message" class="text-red-500 text-xs mt-1 hidden">Nom ou clé incorrect(e).</p>
+                                    </div>
+                                    <button id="team-login-btn" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Se Connecter</button>
+                                    <button id="team-logout-btn" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 hidden">Se Déconnecter</button>
+                                </div>
+                            </div>
+
+                            <!-- Admin: Add Team Member -->
+                            <div id="admin-member-creation-panel">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Ajouter un Membre (Admin)</h2>
+                                <p class="text-sm text-gray-500 mb-4">Une clé d'authentification unique sera générée pour chaque membre.</p>
                                 <div>
                                     <label for="new-team-member" class="block text-sm font-medium text-gray-700">Nom du membre</label>
                                     <div class="mt-1 flex rounded-md shadow-sm">
@@ -180,22 +206,33 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div>
-                                    <label for="team-member-select" class="block text-sm font-medium text-gray-700">Voir la liste de</label>
-                                    <select id="team-member-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                        <option value="">-- Sélectionnez un responsable --</option>
-                                    </select>
-                                </div>
-                                <div id="team-list" class="space-y-2 pt-4">
-                                   <!-- List of team members with delete button -->
+                            </div>
+
+                            <!-- Admin: Team List & Keys -->
+                            <div id="admin-team-list-panel">
+                                <h3 class="text-lg font-medium text-gray-700 mt-6">Liste des Membres et Clés</h3>
+                                <div id="team-list" class="space-y-2 pt-2 text-xs">
+                                   <!-- List of team members with keys and delete button -->
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Col 2/3: Contacts Assigned -->
                         <div class="lg:col-span-2 bg-white shadow rounded-lg p-6">
                             <div id="team-member-contact-view">
-                                <h2 class="text-xl font-bold text-gray-800 mb-4">Contacts du Responsable</h2>
-                                <p class="text-sm text-gray-500">Saisir le numéro de téléphone pour prendre le contrôle du contact.</p>
-                                <p id="team-contact-placeholder" class="text-gray-500">Sélectionnez un membre de l'équipe pour voir sa liste de contacts.</p>
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Contacts Assignés</h2>
+                                <p class="text-sm text-gray-500">Visualisation et mise à jour de votre portefeuille de contacts.</p>
+                                
+                                <!-- Admin Selector (Optional - for admin to view others' lists) -->
+                                <div id="admin-view-selector" class="mt-4 mb-4 p-3 bg-gray-50 rounded-lg border">
+                                    <label for="admin-team-member-select" class="block text-xs font-medium text-gray-700">Vue Admin: Voir la liste de</label>
+                                    <select id="admin-team-member-select" class="mt-1 block w-full pl-3 pr-10 py-1 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                        <option value="">-- Non utilisé (Connectez-vous ci-contre) --</option>
+                                    </select>
+                                </div>
+
+
+                                <p id="team-contact-placeholder" class="text-gray-500 mt-6">Veuillez vous connecter pour voir votre liste de contacts ou utiliser la vue Admin ci-dessus.</p>
                                 <div id="team-contact-list-container" class="hidden contact-list-container overflow-x-auto max-h-[60vh] relative">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50 sticky top-0">
@@ -320,6 +357,8 @@
         window.projectionHistory = [];
         window.votesGoal = 1000;
         window.isAuthReady = false; // Flag to ensure listeners start only after auth
+        window.currentTeamMemberId = null; // New state for logged-in team member
+        window.currentTeamMemberName = null;
         let historyChartInstance = null; // Instance for the evolution chart
 
         const STATUS_OPTIONS = {
@@ -341,12 +380,13 @@
         async function initializeFirebase() {
             // Log la configuration finale pour le débogage de l'utilisateur
             console.log("Configuration Firebase finale utilisée:", firebaseConfig);
+            console.log(`Jeton d'authentification initial disponible: ${!!initialAuthToken}`);
 
             // Vérification des champs critiques pour l'authentification
-            if (!firebaseConfig.apiKey || !firebaseConfig.authDomain) {
-                const errorMsg = "Erreur critique: apiKey ou authDomain manquant dans la configuration Firebase.";
+            if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+                const errorMsg = "Erreur critique: apiKey, authDomain, ou projectId manquant dans la configuration Firebase. Veuillez vérifier vos variables.";
                 console.error(errorMsg);
-                document.getElementById('loading-indicator').textContent = errorMsg;
+                document.getElementById('loading-indicator').innerHTML = `<p class="text-red-600">${errorMsg}</p><p class="text-sm mt-2">Veuillez vérifier les logs dans la console pour la config utilisée.</p>`;
                 return;
             }
 
@@ -355,17 +395,15 @@
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 
-                // L'erreur "auth/configuration-not-found" est souvent levée ici
+                // Tente d'initialiser le service d'authentification
                 auth = getAuth(app); 
                 
                 // Authentification
                 let user;
                 if (initialAuthToken) {
-                    // Fonctionne dans l'environnement Gemini
                     const userCredential = await signInWithCustomToken(auth, initialAuthToken);
                     user = userCredential.user;
                 } else {
-                    // Fonctionne sur GitHub/Local (si jeton manquant)
                     const userCredential = await signInAnonymously(auth);
                     user = userCredential.user;
                 }
@@ -393,8 +431,16 @@
 
             } catch (error) {
                 console.error("Erreur d'initialisation ou d'authentification Firebase:", error);
-                // Le message d'erreur est affiché à l'utilisateur
-                document.getElementById('loading-indicator').textContent = "Erreur de connexion aux services de données: " + error.message;
+                
+                let displayMessage = "Erreur de connexion aux services de données: " + error.message;
+
+                if (error.code === 'auth/configuration-not-found' || error.message.includes('auth/configuration-not-found')) {
+                     displayMessage = `<p class="text-red-600">Erreur critique : Firebase Auth Configuration Not Found.</p>
+                                      <p class="text-sm mt-2 text-gray-700">Cela signifie généralement que vous devez **activer au moins une méthode de connexion** (par exemple, Anonyme ou Email/Password) dans l'onglet **Authentification** de votre console Firebase.</p>
+                                      <p class="text-xs text-gray-500 mt-1">Erreur technique : ${error.message}</p>`;
+                }
+
+                document.getElementById('loading-indicator').innerHTML = displayMessage;
             }
         }
         
@@ -440,6 +486,7 @@
         // --- FIRESTORE ACTIONS ---
         async function saveContact(contact) {
             if (!db) return;
+            // Use the contact ID as the document ID for setDoc
             const contactRef = doc(getPublicCollectionRef('contacts'), contact.id);
             try {
                 // Ensure null values are used instead of empty strings for non-required fields in Firestore
@@ -450,6 +497,8 @@
                     controlledByMemberId: contact.controlledByMemberId || null,
                     controlledByMemberName: contact.controlledByMemberName || null,
                 };
+                // Exclude the ID from the document content, it's the doc key
+                delete dataToSave.id;
                 await setDoc(contactRef, dataToSave);
             } catch (e) {
                 console.error("Error saving document:", e);
@@ -469,7 +518,11 @@
         async function addTeamMember(name) {
              if (!db) return;
              try {
-                 const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), { name: name });
+                 const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), { 
+                     name: name,
+                     // Generate a simple key for passwordless login simulation
+                     authKey: crypto.randomUUID().substring(0, 8) 
+                 });
                  return newDoc.id; 
              } catch (e) {
                  console.error("Error adding team member:", e);
@@ -500,11 +553,31 @@
         window.updateAll = function() {
             window.renderContacts();
             window.updateDashboard();
+            window.updateTeamStatusDisplay();
+
             if (!document.getElementById('team-view').classList.contains('hidden')) {
                 window.renderTeamView();
             }
              if (!document.getElementById('projections-view').classList.contains('hidden')) {
                 window.updateHistoryChart();
+            }
+        }
+
+        window.updateTeamStatusDisplay = function() {
+            const statusEl = document.getElementById('team-member-status');
+            const loginBtn = document.getElementById('team-login-btn');
+            const logoutBtn = document.getElementById('team-logout-btn');
+
+            if (window.currentTeamMemberId) {
+                statusEl.classList.remove('hidden', 'bg-yellow-100', 'text-yellow-800');
+                statusEl.classList.add('bg-green-100', 'text-green-800');
+                statusEl.textContent = `Connecté: ${window.currentTeamMemberName}`;
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+            } else {
+                statusEl.classList.add('hidden');
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
             }
         }
         
@@ -585,8 +658,12 @@
                     return birthDate >= today && birthDate <= thirtyDaysFromNow;
                 } catch(e) { return false; }
             }).sort((a,b) => {
-                const [dayA, monthA] = a.dateNaissance.split('/');
-                const [dayB, monthB] = b.dateNaissance.split('/');
+                const partsA = a.dateNaissance.split('/');
+                const partsB = b.dateNaissance.split('/');
+                if(partsA.length < 3 || partsB.length < 3) return 0;
+
+                const [dayA, monthA] = partsA;
+                const [dayB, monthB] = partsB;
                 let dateA = new Date(today.getFullYear(), parseInt(monthA)-1, parseInt(dayA));
                 let dateB = new Date(today.getFullYear(), parseInt(monthB)-1, parseInt(dayB));
                 if(dateA < today) dateA.setFullYear(today.getFullYear() + 1);
@@ -615,6 +692,7 @@
             tableBody.innerHTML = '';
             const contactsToRender = filteredContacts || window.contacts;
             
+            // Populate the team select options for the general contact list
             const teamMembersOptions = window.teamMembers.map(tm => `<option value="${tm.id}">${tm.name}</option>`).join('');
 
             contactsToRender.forEach(contact => {
@@ -680,22 +758,42 @@
         
         // --- TEAM MANAGEMENT ---
         window.renderTeamView = function() {
-            const teamSelect = document.getElementById('team-member-select');
+            const loginSelect = document.getElementById('login-team-member-select');
+            const adminSelect = document.getElementById('admin-team-member-select');
             const teamListDiv = document.getElementById('team-list');
             
-            const selectedMemberId = teamSelect.value;
+            const adminSelectedMemberId = adminSelect.value;
             
-            teamSelect.innerHTML = '<option value="">-- Sélectionnez un responsable --</option>';
+            loginSelect.innerHTML = '<option value="">-- Sélectionnez un responsable --</option>';
+            adminSelect.innerHTML = '<option value="">-- Vue Admin: Sélectionner un membre --</option>';
             teamListDiv.innerHTML = '';
 
             window.teamMembers.forEach(member => {
-                teamSelect.innerHTML += `<option value="${member.id}" ${selectedMemberId === member.id ? 'selected' : ''}>${member.name}</option>`;
+                // For Login Selector
+                loginSelect.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+
+                // For Admin View Selector
+                adminSelect.innerHTML += `<option value="${member.id}" ${adminSelectedMemberId === member.id ? 'selected' : ''}>${member.name}</option>`;
+                
+                // For Admin List Display
                 const assignedCount = window.contacts.filter(c => c.assignedTo === member.id).length;
-                teamListDiv.innerHTML += `<div class="flex justify-between items-center text-sm p-2 bg-gray-50 rounded"><span>${member.name} (${assignedCount} contacts)</span><button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold ml-4">X</button></div>`;
+                teamListDiv.innerHTML += `<div class="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
+                                            <div>
+                                                <span class="font-semibold">${member.name} (${assignedCount} contacts)</span><br>
+                                                <span class="text-gray-500">Clé: 
+                                                    <span class="font-mono text-blue-600">${member.authKey || 'N/A'}</span>
+                                                </span>
+                                            </div>
+                                            <button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold ml-4">X</button>
+                                          </div>`;
             });
             
             document.querySelectorAll('.delete-member-btn').forEach(btn => btn.addEventListener('click', handleDeleteTeamMember));
-            window.renderAssignedContacts(selectedMemberId);
+
+            // Determine which list to render: Logged-in member's list takes priority
+            const memberIdToRender = window.currentTeamMemberId || adminSelectedMemberId;
+            
+            window.renderAssignedContacts(memberIdToRender);
         }
 
         function handleAddTeamMember() {
@@ -712,6 +810,7 @@
             // Placeholder for custom modal UI (replacing alert/confirm)
             if(window.confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
                 
+                // Clear assignments and control fields for affected contacts
                 window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
                     const contactToUpdate = {...c};
                     if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
@@ -723,8 +822,47 @@
                     saveContact(contactToUpdate); 
                 });
                 
+                // If the deleted member was logged in, log them out
+                if (window.currentTeamMemberId === memberId) {
+                    handleTeamLogout();
+                }
+
                 deleteTeamMember(memberId); 
             }
+        }
+
+        // New: Team Login Logic
+        function handleTeamLogin() {
+            const memberId = document.getElementById('login-team-member-select').value;
+            const authKey = document.getElementById('auth-key-input').value.trim();
+            const errorEl = document.getElementById('login-error-message');
+            
+            errorEl.classList.add('hidden');
+
+            if (!memberId || !authKey) {
+                errorEl.textContent = 'Veuillez sélectionner un nom et entrer une clé.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const member = window.teamMembers.find(m => m.id === memberId);
+            
+            if (member && member.authKey === authKey) {
+                window.currentTeamMemberId = member.id;
+                window.currentTeamMemberName = member.name;
+                document.getElementById('auth-key-input').value = ''; // Clear key input
+                document.getElementById('login-team-member-select').value = ''; // Reset select
+                window.renderTeamView(); // Rerender to show logged-in view
+            } else {
+                errorEl.textContent = 'Nom ou clé incorrect(e).';
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function handleTeamLogout() {
+            window.currentTeamMemberId = null;
+            window.currentTeamMemberName = null;
+            window.renderTeamView();
         }
 
         window.renderAssignedContacts = function(memberId) {
@@ -734,6 +872,11 @@
             
             placeholder.classList.toggle('hidden', !!memberId);
             container.classList.toggle('hidden', !memberId);
+            
+            // Show Admin View Selector if NO team member is logged in.
+            const adminSelector = document.getElementById('admin-view-selector');
+            adminSelector.classList.toggle('hidden', !!window.currentTeamMemberId);
+
             if (!memberId) return;
 
             tableBody.innerHTML = '';
@@ -741,9 +884,13 @@
             const actingMember = window.teamMembers.find(m => m.id === memberId); // Current member viewing the list
             if (!actingMember) return; 
             
+            const isActingAsSelf = window.currentTeamMemberId === memberId;
+            
             assigned.forEach(contact => {
                 const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId != memberId;
-                const phoneInputDisabled = isControlledByAnother ? 'disabled' : '';
+                
+                // Disable controls unless acting as self AND it's not controlled by someone else
+                const controlsDisabled = !isActingAsSelf || isControlledByAnother; 
 
                 const row = document.createElement('tr');
                 const statusOptionsHtml = Object.keys(TEAM_STATUS_OPTIONS).map(key => `<option value="${key}" ${contact.status === key ? 'selected' : ''}>${TEAM_STATUS_OPTIONS[key]}</option>`).join('');
@@ -754,21 +901,21 @@
                     
                     <!-- PHONE NUMBER INPUT (Control mechanism) -->
                     <td class="px-6 py-4 text-sm text-gray-500 relative min-w-[150px]">
-                        <input type="tel" data-id="${contact.id}" data-member-id="${memberId}" class="phone-input w-full rounded-md border-gray-300 shadow-sm text-xs px-2 py-1 focus:ring-blue-500 focus:border-blue-500" value="${contact.numeroTelephone || ''}" placeholder="Numéro (Contrôle)" ${phoneInputDisabled}>
+                        <input type="tel" data-id="${contact.id}" data-member-id="${memberId}" class="phone-input w-full rounded-md border-gray-300 shadow-sm text-xs px-2 py-1 focus:ring-blue-500 focus:border-blue-500" value="${contact.numeroTelephone || ''}" placeholder="Numéro (Contrôle)" ${controlsDisabled ? 'disabled' : ''}>
                         ${isControlledByAnother ? `<span class="controlled-message">Géré par ${contact.controlledByMemberName || 'un autre membre'}.</span>` : ''}
                     </td>
 
                     <!-- Status Select -->
-                    <td class="px-6 py-4 text-sm text-gray-500"><select data-id="${contact.id}" class="team-status-select w-full rounded-md border-gray-300 shadow-sm text-xs" ${contact.status === 'A voté' ? 'disabled' : ''}>${statusOptionsHtml}</select></td>
+                    <td class="px-6 py-4 text-sm text-gray-500"><select data-id="${contact.id}" class="team-status-select w-full rounded-md border-gray-300 shadow-sm text-xs" ${contact.status === 'A voté' || controlsDisabled ? 'disabled' : ''}>${statusOptionsHtml}</select></td>
                     
                     <!-- Voted Checkbox -->
-                    <td class="px-6 py-4 text-center"><input type="checkbox" data-id="${contact.id}" class="voted-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded" ${contact.status === 'A voté' ? 'checked' : ''}></td>`;
+                    <td class="px-6 py-4 text-center"><input type="checkbox" data-id="${contact.id}" class="voted-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded" ${contact.status === 'A voté' || controlsDisabled ? 'checked disabled' : (controlsDisabled ? 'disabled' : '')}></td>`;
                 tableBody.appendChild(row);
             });
             
-            document.querySelectorAll('.phone-input').forEach(input => input.addEventListener('change', handlePhoneNumberChange));
-            document.querySelectorAll('.team-status-select').forEach(s => s.addEventListener('change', handleTeamStatusChange));
-            document.querySelectorAll('.voted-checkbox').forEach(cb => cb.addEventListener('change', handleVotedChange));
+            document.querySelectorAll('.phone-input:not([disabled])').forEach(input => input.addEventListener('change', handlePhoneNumberChange));
+            document.querySelectorAll('.team-status-select:not([disabled])').forEach(s => s.addEventListener('change', handleTeamStatusChange));
+            document.querySelectorAll('.voted-checkbox:not([disabled])').forEach(cb => cb.addEventListener('change', handleVotedChange));
         }
         
         function handlePhoneNumberChange(event) {
@@ -779,16 +926,14 @@
             const actingMember = window.teamMembers.find(m => m.id === actingMemberId);
 
             if (!contact || !actingMember) return;
-
+            
+            // Re-check for control status just before saving
             const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId !== actingMemberId;
             
             if (isControlledByAnother) {
+                // Should be disabled in UI, but just in case:
                 event.target.value = contact.numeroTelephone || ''; 
-                const messageSpan = document.createElement('span');
-                messageSpan.className = 'controlled-message';
-                messageSpan.textContent = `Géré par ${contact.controlledByMemberName}.`;
-                event.target.parentElement.appendChild(messageSpan);
-                setTimeout(() => { messageSpan.remove(); }, 4000);
+                console.warn("Attempt to change phone number rejected: Controlled by another member.");
                 return; 
             }
             
@@ -799,6 +944,7 @@
                 contactToUpdate.controlledByMemberId = actingMemberId;
                 contactToUpdate.controlledByMemberName = actingMember.name;
             } else {
+                // Releasing control
                 contactToUpdate.numeroTelephone = null;
                 contactToUpdate.controlledByMemberId = null;
                 contactToUpdate.controlledByMemberName = null;
@@ -812,6 +958,7 @@
                  const contactToUpdate = {...contact};
                 contactToUpdate.status = event.target.value;
                 if(contactToUpdate.status === 'A voté') {
+                    // Update checkbox if status is set to 'A voté'
                     document.querySelector(`.voted-checkbox[data-id="${contact.id}"]`).checked = true;
                 }
                 saveContact(contactToUpdate); 
@@ -822,13 +969,19 @@
              const contact = window.contacts.find(c => c.id == event.target.dataset.id);
              if (contact) {
                 const contactToUpdate = {...contact};
+                // Set status to 'A voté' if checked, otherwise default back to 'Acquis' (the strongest non-voted status)
                 contactToUpdate.status = event.target.checked ? 'A voté' : 'Acquis';
                 document.querySelector(`.team-status-select[data-id="${contact.id}"]`).value = contactToUpdate.status;
                 saveContact(contactToUpdate); 
              }
         }
+
+        // New Login/Logout button handlers
+        document.getElementById('team-login-btn').addEventListener('click', handleTeamLogin);
+        document.getElementById('team-logout-btn').addEventListener('click', handleTeamLogout);
+        
         document.getElementById('add-team-member-btn').addEventListener('click', handleAddTeamMember);
-        document.getElementById('team-member-select').addEventListener('change', (e) => window.renderAssignedContacts(e.target.value));
+        document.getElementById('admin-team-member-select').addEventListener('change', (e) => window.renderAssignedContacts(e.target.value));
 
         // --- CSV IMPORT ---
         document.getElementById('csv-file-input').addEventListener('change', (event) => {
@@ -847,9 +1000,13 @@
                 return;
             }
             
+            // Heuristic to detect common delimiters, favoring semicolon/comma
+            const firstLine = csvText.split(/\r\n|\n/)[0];
+            const delimiter = firstLine.includes(';') ? ';' : ',';
+
             const lines = csvText.split(/\r\n|\n/).slice(1);
             const newContacts = lines.filter(line => line.trim() !== '').map((line) => {
-                const data = line.split(/[;,]/).map(d => d.trim().replace(/"/g, ''));
+                const data = line.split(new RegExp(`[${delimiter}]`)).map(d => d.trim().replace(/"/g, ''));
                  const contact = {
                     status: 'À contacter', 
                     nomNaissance: data[0] || '', 
@@ -871,6 +1028,7 @@
                 let importedCount = 0;
                 for (const contact of newContacts) {
                     try {
+                        // Use addDoc to let Firestore generate the ID
                         await addDoc(getPublicCollectionRef('contacts'), contact);
                         importedCount++;
                     } catch (e) {
@@ -922,17 +1080,25 @@
                 const numRivalLists = numLists - 1;
                 const baseVote = otherVotes / numRivalLists;
                 let simulatedTotal = 0;
+                // Generate initial simulated votes
                 for (let i = 1; i < numLists; i++) {
+                    // Slight random variance for realism
                     const variance = baseVote * (0.8 + Math.random() * 0.4); 
-                    allLists.push({ name: `Liste Adverse ${i}`, votes: Math.round(variance), seats: 0 });
-                    simulatedTotal += Math.round(variance);
+                    const simulatedVotes = Math.round(variance);
+                    allLists.push({ name: `Liste Adverse ${i}`, votes: simulatedVotes, seats: 0 });
+                    simulatedTotal += simulatedVotes;
                 }
                 
-                const totalSimulated = allLists.reduce((sum, list) => sum + list.votes, 0);
-                if(totalSimulated !== totalVotants) {
-                    const factor = totalVotants / totalSimulated;
-                    allLists.forEach(list => list.votes = Math.round(list.votes * factor));
+                // Adjust to ensure total simulated votes is close to otherVotes
+                const currentTotalRival = allLists.slice(1).reduce((sum, list) => sum + list.votes, 0);
+                const adjustmentNeeded = otherVotes - currentTotalRival;
+
+                if (numRivalLists > 0) {
+                    // Distribute remaining adjustment to one list
+                    allLists[1].votes += adjustmentNeeded;
                 }
+
+                
             }
             
             let seatsAttributed = 0, stepLog = '';
@@ -954,6 +1120,7 @@
                 let maxAvg = -1;
 
                 currentAllLists.forEach(list => {
+                    // D'Hondt formula: Votes / (Seats + 1)
                     const currentAvg = list.votes / (list.seats + 1); 
                     if (currentAvg > maxAvg) {
                         maxAvg = currentAvg;
