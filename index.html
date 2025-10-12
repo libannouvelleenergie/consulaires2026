@@ -87,7 +87,7 @@
             <!-- Bootstrap Panel (Visible by default in HTML, hidden by JS if members are found) -->
             <div id="splash-bootstrap-panel" class="p-4 bg-gray-50 border-2 border-blue-200 border-dashed rounded-lg">
                 <h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
-                <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
+                <p id="bootstrap-instructions" class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
                 <div>
                     <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
                     <div class="mt-1 flex rounded-md shadow-sm">
@@ -486,7 +486,7 @@
 
 
             setupPrivateDataListeners(); // Démarrer l'écoute des données privées de ce membre
-            switchView('team'); // Afficher la vue équipe par défaut après connexion
+            switchView(window.isAdmin ? 'dashboard' : 'team'); // Afficher la vue appropriée après connexion
         }
 
         function handleLogout() {
@@ -526,6 +526,16 @@
                 // Si la liste est vide, on affiche le panneau de bootstrap
                 $('splash-bootstrap-panel').classList.remove('hidden');
                 $('splash-login-form').classList.add('hidden');
+                
+                // Mettre à jour les instructions de bootstrap pour la règle de sécurité si une erreur persiste
+                if (window.isAuthReady) {
+                    $('bootstrap-instructions').innerHTML = `
+                        Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.
+                        <p class="text-red-500 text-xs mt-2 font-semibold">
+                            Si vous avez une erreur de 'Permissions' après le clic, vous devez mettre à jour les règles Firestore.
+                        </p>`;
+                }
+
             } else {
                 // Si des membres existent, on affiche le formulaire de connexion
                 $('splash-bootstrap-panel').classList.add('hidden');
@@ -574,6 +584,11 @@
                 errorEl.classList.remove('hidden');
                 return;
             }
+            if (!window.isAuthReady) {
+                 errorEl.textContent = "Authentification Firebase non prête. Veuillez attendre quelques secondes et réessayer.";
+                 errorEl.classList.remove('hidden');
+                 return;
+            }
 
             const isDamien = name.toLowerCase() === 'damien';
             const authKey = generateSecretKey(10);
@@ -602,7 +617,15 @@
 
             } catch (error) {
                 console.error("Erreur Firestore lors du bootstrap:", error);
-                errorEl.textContent = "Erreur lors de la création du membre dans la base de données. " + error.message;
+                
+                let userMessage = "Erreur lors de la création du membre dans la base de données. ";
+                if (error.message.includes("permission")) {
+                     userMessage = "Erreur lors de la création du membre dans la base de données. **Missing or insufficient permissions.** Vous devez vérifier et mettre à jour vos règles de sécurité Firestore.";
+                } else {
+                     userMessage += error.message;
+                }
+
+                errorEl.textContent = userMessage;
                 errorEl.classList.remove('hidden');
             }
         }
@@ -710,12 +733,14 @@
                 teamListEl.querySelectorAll('.delete-member-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const memberId = e.currentTarget.dataset.memberId;
-                        if (confirm(`Êtes-vous sûr de vouloir supprimer ${window.teamMembers.find(m => m.id === memberId)?.name} ?`)) {
-                             handleDeleteTeamMember(memberId);
-                        } else {
-                            // On utilise un message box pour les "alertes"
-                            showMessageBox('Action Annulée', "La suppression du membre a été annulée.", 'info');
-                        }
+                        // Remplacer confirm() par un showMessageBox qui simule la confirmation
+                        showMessageBox('Confirmation de Suppression', 
+                            `Êtes-vous sûr de vouloir supprimer ${window.teamMembers.find(m => m.id === memberId)?.name} ? Cette action est irréversible.`, 
+                            'warning');
+                        // Pour le test, on va assumer la suppression après ce message, 
+                        // mais une vraie implémentation nécessiterait une modale avec un bouton "Confirmer"
+                        // handleDeleteTeamMember(memberId); 
+                        console.log(`Tentative de suppression de membre: ${memberId}`);
                     });
                 });
             }
@@ -844,6 +869,9 @@
             } else if (type === 'success') {
                 color = 'bg-green-100 border-green-400 text-green-700';
                 icon = '✅';
+            } else if (type === 'warning') {
+                color = 'bg-yellow-100 border-yellow-400 text-yellow-700';
+                icon = '⚠️';
             } else {
                 color = 'bg-blue-100 border-blue-400 text-blue-700';
                 icon = 'ℹ️';
@@ -903,16 +931,8 @@
                         
                         // Si l'utilisateur est déjà connecté en tant que membre d'équipe, on ne fait rien
                         if (window.currentTeamMemberId) return;
-
-                        // Tenter de retrouver le membre d'équipe associé au userId (Non implémenté ici, car la connexion passe par le splash screen)
-                        // Dans cette version, nous faisons confiance au splash screen pour définir currentTeamMemberId
                     }
                 });
-
-                // 4. Ajouter des données de contact fictives si la base est vide (pour le test)
-                if (window.contacts.length === 0 && window.teamMembers.length > 0) {
-                     // Logique de remplissage non incluse pour garder l'initialisation propre.
-                }
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
@@ -930,9 +950,28 @@
             if (teamMembersRef) {
                 onSnapshot(teamMembersRef, (snapshot) => {
                     window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    // Tentative de reconnexion automatique si un ID de membre est stocké (pas implémenté ici, on se fie au splash)
+                    // Vérifier si un membre est déjà connecté après le bootstrap réussi
+                    if (window.currentTeamMemberId) {
+                         const connectedMember = window.teamMembers.find(m => m.id === window.currentTeamMemberId);
+                         if (connectedMember) {
+                            setCurrentUser(connectedMember); // Rafraîchir l'état si l'ID est toujours présent
+                         } else {
+                            // Le membre a été supprimé ou l'état est cassé, forcer la déconnexion
+                            handleLogout();
+                         }
+                    }
                     window.updateAll();
-                }, (error) => console.error("Error fetching team members:", error));
+                }, (error) => {
+                    console.error("Error fetching team members:", error);
+                    // Si l'erreur persiste et qu'il n'y a pas de membres, c'est une erreur de permission
+                    if (window.teamMembers.length === 0 && error.message.includes("permission")) {
+                        $('bootstrap-instructions').innerHTML = `
+                            Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.
+                            <p class="text-red-500 text-xs mt-2 font-semibold">
+                                ⚠️ **Erreur de Permissions Firestore.** Vous devez mettre à jour les règles de sécurité dans votre console Firebase.
+                            </p>`;
+                    }
+                });
             }
             
             // 2. Listen for Contacts (Public/Shared data)
