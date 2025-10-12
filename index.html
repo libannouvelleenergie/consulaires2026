@@ -84,8 +84,22 @@
         <div id="splash-login-card" class="w-full max-w-md bg-white shadow-xl rounded-lg p-8 space-y-6">
             <h2 class="text-2xl font-bold text-center text-gray-800">Connexion Équipe</h2>
             
-            <!-- Default Login Form (Visible when members exist) -->
-            <div id="splash-login-form" class="space-y-4">
+            <!-- Bootstrap Panel (Visible by default in HTML, hidden by JS if members are found) -->
+            <div id="splash-bootstrap-panel" class="p-4 bg-gray-50 border-2 border-blue-200 border-dashed rounded-lg">
+                <h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
+                <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
+                <div>
+                    <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <input type="text" id="bootstrap-member-name" placeholder="Ex: Damien" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <button id="bootstrap-add-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-blue-600 text-white text-sm hover:bg-blue-700">Créer & Se Connecter</button>
+                    </div>
+                    <p id="bootstrap-error-message" class="text-red-500 text-xs mt-1 hidden"></p>
+                </div>
+            </div>
+
+            <!-- Default Login Form (Hidden by default in HTML, revealed by JS if members are found) -->
+            <div id="splash-login-form" class="space-y-4 hidden">
                 <div>
                     <label for="splash-login-member-select" class="block text-sm font-medium text-gray-700">Sélectionner votre nom</label>
                     <select id="splash-login-member-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
@@ -98,20 +112,6 @@
                     <p id="splash-login-error-message" class="text-red-500 text-xs mt-1 hidden">Nom ou clé incorrect(e).</p>
                 </div>
                 <button id="splash-team-login-btn" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Se Connecter</button>
-            </div>
-
-            <!-- Bootstrap Panel (Visible only when no members exist) -->
-            <div id="splash-bootstrap-panel" class="p-4 bg-gray-50 border-2 border-blue-200 border-dashed rounded-lg hidden">
-                <h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
-                <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits Administrateur.</p>
-                <div>
-                    <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
-                    <div class="mt-1 flex rounded-md shadow-sm">
-                        <input type="text" id="bootstrap-member-name" placeholder="Ex: Damien" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
-                        <button id="bootstrap-add-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-blue-600 text-white text-sm hover:bg-blue-700">Créer & Se Connecter</button>
-                    </div>
-                    <p id="bootstrap-error-message" class="text-red-500 text-xs mt-1 hidden"></p>
-                </div>
             </div>
 
              <!-- Placeholder for critical errors -->
@@ -440,9 +440,6 @@
         function loadPublicData() {
             if (!db) return;
             
-            // NOTE IMPORTANTE: Pour que ces écouteurs fonctionnent, les règles de sécurité Firestore
-            // DOIVENT autoriser la lecture pour les utilisateurs non authentifiés/anonymes sur ces chemins (read: if true).
-
             // 1. Listen for Team Members (Public/Shared data)
             onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
                 window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -506,7 +503,6 @@
                 window.isAuthReady = true;
 
                 // 2. Démarrer l'écoute des données publiques (membres d'équipe, contacts) immédiatement.
-                // Cela est fait après l'authentification (même anonyme) pour respecter les règles de sécurité.
                 loadPublicData();
                 
                 // 3. Cacher l'indicateur de chargement
@@ -523,6 +519,9 @@
 
                 // 5. Assurer que le splash screen est visible pour la connexion manuelle
                 document.getElementById('login-splash-view').classList.remove('hidden');
+                
+                // Initial update to set correct visibility based on teamMembers[] status
+                window.updateAll(); 
 
             } catch (error) {
                 console.error("Erreur d'initialisation ou d'authentification Firebase:", error);
@@ -573,13 +572,15 @@
              if (!db) return;
              // Set isAdmin: true if the name is Damien (case-insensitive)
              const isAdmin = name.trim().toLowerCase() === 'damien';
+             const newAuthKey = crypto.randomUUID().substring(0, 8); // Generate key only once
              try {
-                 const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), { 
+                 const memberData = {
                      name: name,
-                     authKey: crypto.randomUUID().substring(0, 8),
+                     authKey: newAuthKey,
                      isAdmin: isAdmin // New field for role-based access control
-                 });
-                 return newDoc.id; 
+                 };
+                 const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), memberData);
+                 return { id: newDoc.id, ...memberData }; // Return the full member object
              } catch (e) {
                  console.error("Error adding team member:", e);
                  return null;
@@ -639,7 +640,10 @@
                     splashPanel.classList.remove('hidden');
                     loginForm.classList.add('hidden');
                 } else {
-                    splashPanel.classList.add('hidden');
+                    // Hide the bootstrap panel content, unless it's showing a success message
+                    if (!splashPanel.querySelector('.p-4.bg-green-100')) {
+                        splashPanel.classList.add('hidden');
+                    }
                     loginForm.classList.remove('hidden');
                 }
             }
@@ -941,12 +945,24 @@
             window.renderAssignedContacts(memberIdToRender);
         }
 
-        function handleAddTeamMember() {
+        async function handleAddTeamMember() {
             if (!window.isAdmin) return;
             const input = document.getElementById('new-team-member');
             if (input.value.trim()) {
-                addTeamMember(input.value.trim()); 
-                input.value = '';
+                const name = input.value.trim();
+                const newMember = await addTeamMember(name);
+                
+                if (newMember) {
+                    input.value = '';
+                    // Temporary confirmation message with the key
+                    const teamListDiv = document.getElementById('team-list');
+                    const tempMessage = document.createElement('div');
+                    tempMessage.className = 'p-3 my-2 bg-yellow-100 border border-yellow-400 rounded text-xs text-yellow-800 font-semibold';
+                    tempMessage.innerHTML = `Clé de ${newMember.name} (à copier) : <span class="font-mono text-base">${newMember.authKey}</span>`;
+                    teamListDiv.prepend(tempMessage);
+
+                    setTimeout(() => tempMessage.remove(), 7000); // Remove message after 7 seconds
+                }
             }
         }
 
@@ -1032,11 +1048,10 @@
             }
             
             // This relies on the addTeamMember logic which sets isAdmin if name is "Damien"
-            const newMemberId = await addTeamMember(name);
+            const newMember = await addTeamMember(name); // Now returns the member object
+            const newMemberId = newMember ? newMember.id : null;
 
             if (newMemberId) {
-                // Find the new member's key and log them in immediately
-                const newMember = window.teamMembers.find(m => m.id === newMemberId);
                 
                 if (newMember) {
                     // Simulate successful login
@@ -1046,13 +1061,24 @@
 
                     setupPrivateDataListeners(); // Start private data listener
 
-                    // Show main app, hide splash screen
-                    document.getElementById('login-splash-view').classList.add('hidden');
-                    document.getElementById('app-container').classList.remove('hidden');
+                    // *** NEW KEY DISPLAY LOGIC (Success Message) ***
+                    const bootstrapPanel = document.getElementById('splash-bootstrap-panel');
+                    bootstrapPanel.innerHTML = `<div class="p-4 bg-green-100 border-2 border-green-400 rounded-lg">
+                        <h3 class="text-lg font-bold text-green-800">Compte Admin Créé!</h3>
+                        <p class="text-sm text-green-700">Votre clé de connexion secrète est : 
+                            <span class="font-mono text-xl bg-white p-1 rounded font-bold text-blue-800">${newMember.authKey}</span>
+                        </p>
+                        <p class="text-xs text-green-700 mt-2">Notez-la pour les futures connexions (utilisez l'option "Sélectionner votre nom" ci-dessous).</p>
+                        <button onclick="document.getElementById('login-splash-view').classList.add('hidden'); document.getElementById('app-container').classList.remove('hidden'); showView('${window.isAdmin ? 'dashboard' : 'team'}'); window.updateAll();" 
+                            class="mt-3 w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Accéder à l'application
+                        </button>
+                    </div>`;
 
-                    const initialView = window.isAdmin ? 'dashboard' : 'team';
-                    showView(initialView);
-                    window.updateAll(); 
+
+                    // The user must click the button to proceed, allowing them to copy the key first.
+                    // The rest of the updateAll/showView logic is moved to the button's click handler.
+                    
                 } else {
                      errorEl.textContent = 'Erreur lors de la récupération du nouveau membre. Réessayez.';
                      errorEl.classList.remove('hidden');
@@ -1074,6 +1100,25 @@
             
             window.updateLoginSelect();
             window.updateTeamStatusDisplay();
+
+            // Reset bootstrap panel if the team is now empty
+            if (window.teamMembers.length === 0) {
+                 // Reload page to reset the splash-bootstrap-panel state or manually reset it
+                 // Manually resetting the content to the original state:
+                 const splashPanel = document.getElementById('splash-bootstrap-panel');
+                 splashPanel.innerHTML = `<h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
+                    <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
+                    <div>
+                        <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="text" id="bootstrap-member-name" placeholder="Ex: Damien" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                            <button id="bootstrap-add-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-blue-600 text-white text-sm hover:bg-blue-700">Créer & Se Connecter</button>
+                        </div>
+                        <p id="bootstrap-error-message" class="text-red-500 text-xs mt-1 hidden"></p>
+                    </div>`;
+                // Re-attach event listener
+                document.getElementById('bootstrap-add-member-btn').addEventListener('click', handleBootstrapAddMember);
+            }
         }
 
         window.renderAssignedContacts = function(memberId) {
