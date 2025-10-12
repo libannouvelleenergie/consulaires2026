@@ -283,19 +283,15 @@
         // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE
         // *******************************************************************
         
-        // ATTENTION: Si vous déployez sur GitHub (ou hors de l'environnement Gemini), 
-        // les variables __firebase_config et __app_id ne seront pas disponibles.
-        // VOUS DEVEZ REMPLACER les VALEURS DANS hardcodedFirebaseConfig ci-dessous 
-        // par la configuration réelle de votre projet Firebase.
-        
+        // Configuration de secours (fall-back) avec les valeurs fournies
         const hardcodedFirebaseConfig = {
-            apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo", // <-- CLÉ API MISE À JOUR
-            authDomain: "elecmanager-6f50a.firebaseapp.com", // <-- DOMAINE MIS À JOUR
-            projectId: "elecmanager-6f50a", // <-- PROJET MIS À JOUR
-            storageBucket: "elecmanager-6f50a.firebasestorage.app", // <-- STORAGE BUCKET MIS À JOUR
-            messagingSenderId: "872950170067", // <-- SENDER ID MIS À JOUR
-            appId: "1:872950170067:web:dc23cc105538d3e88baf26", // <-- APP ID MIS À JOUR
-            measurementId: "G-GXP88CTD96" // <-- MEASUREMENT ID MIS À JOUR
+            apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
+            authDomain: "elecmanager-6f50a.firebaseapp.com",
+            projectId: "elecmanager-6f50a",
+            storageBucket: "elecmanager-6f50a.firebasestorage.app",
+            messagingSenderId: "872950170067",
+            appId: "1:872950170067:web:dc23cc105538d3e88baf26",
+            measurementId: "G-GXP88CTD96"
         };
         const hardcodedAppId = hardcodedFirebaseConfig.appId;
 
@@ -305,7 +301,6 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : hardcodedAppId;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
-        // Tenter de parser la configuration injectée par l'environnement
         if (typeof __firebase_config !== 'undefined' && __firebase_config.length > 0) {
             try {
                 const parsedConfig = JSON.parse(__firebase_config);
@@ -344,10 +339,23 @@
         
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
+            // Log la configuration finale pour le débogage de l'utilisateur
+            console.log("Configuration Firebase finale utilisée:", firebaseConfig);
+
+            // Vérification des champs critiques pour l'authentification
+            if (!firebaseConfig.apiKey || !firebaseConfig.authDomain) {
+                const errorMsg = "Erreur critique: apiKey ou authDomain manquant dans la configuration Firebase.";
+                console.error(errorMsg);
+                document.getElementById('loading-indicator').textContent = errorMsg;
+                return;
+            }
+
             try {
                 // Initialisation de l'application
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
+                
+                // L'erreur "auth/configuration-not-found" est souvent levée ici
                 auth = getAuth(app); 
                 
                 // Authentification
