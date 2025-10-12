@@ -280,14 +280,11 @@
         let userId = 'anonymous'; // Default until authenticated
         
         // *******************************************************************
-        // VOTRE CONFIGURATION FIREBASE - MISE À JOUR (ÉTAPE 2)
+        // CONFIGURATION FIREBASE - UTILISATION DES VARIABLES D'ENVIRONNEMENT
         // *******************************************************************
         
-        // L'ID de l'application est utilisé pour définir le chemin des collections dans Firestore
-        const appId = '1:872950170067:web:dc23cc105538d3e88baf26';
-        
-        // VOTRE OBJET DE CONFIGURATION COMPLET COPIÉ DEPUIS LA CONSOLE FIREBASE
-        const firebaseConfig = {
+        // 1. Définir la configuration de repli pour GitHub Pages (mode non-Canvas)
+        const hardcodedFirebaseConfig = {
             apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
             authDomain: "elecmanager-6f50a.firebaseapp.com",
             projectId: "elecmanager-6f50a",
@@ -296,9 +293,13 @@
             appId: "1:872950170067:web:dc23cc105538d3e88baf26",
             measurementId: "G-GXP88CTD96"
         };
-        
-        // Cet initialAuthToken est uniquement pour l'environnement Canvas, il doit être null pour le déploiement local
-        const initialAuthToken = null; 
+        const hardcodedAppId = hardcodedFirebaseConfig.appId;
+
+        // 2. Charger les variables d'environnement Canvas, ou utiliser le repli
+        const appId = typeof __app_id !== 'undefined' ? __app_id : hardcodedAppId;
+        // IMPORTANT : __firebase_config est une chaîne JSON et doit être parsée.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : hardcodedFirebaseConfig;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
         // --- GLOBAL STATE ---
         window.contacts = [];
@@ -326,18 +327,20 @@
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
             try {
+                // Initialisation de l'application avec la configuration (dynamique ou de repli)
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
                 let user;
 
-                // 1. Perform Authentication synchronously (awaiting the result)
+                // 1. Tenter l'authentification
                 if (initialAuthToken) {
+                    // Connexion sécurisée avec le jeton Canvas
                     const userCredential = await signInWithCustomToken(auth, initialAuthToken);
                     user = userCredential.user;
                 } else {
-                    // Pour votre déploiement local, nous utilisons l'authentification anonyme par défaut
+                    // Repli pour le mode local/GitHub Pages
                     const userCredential = await signInAnonymously(auth);
                     user = userCredential.user;
                 }
@@ -345,16 +348,16 @@
                 if (user) {
                     userId = user.uid;
                     document.getElementById('user-id').textContent = userId;
-                    window.isAuthReady = true; // Auth is now confirmed and ready
+                    window.isAuthReady = true; // Auth est confirmé et prêt
 
-                    // 2. Setup Listeners ONLY AFTER successful sign-in
+                    // 2. Mise en place des écouteurs après succès de l'authentification
                     setupFirestoreListeners();
                 } else {
                      document.getElementById('loading-indicator').textContent = "Erreur: Impossible d'authentifier l'utilisateur.";
                      return;
                 }
 
-                // 3. Set up persistent observer (mainly for debugging/robustness, doesn't block init)
+                // 3. Observez les changements d'état (pour robustesse)
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid; 
@@ -365,7 +368,7 @@
                 document.getElementById('dashboard-view').classList.remove('hidden');
 
             } catch (error) {
-                console.error("Error initializing Firebase or signing in:", error);
+                console.error("Erreur d'initialisation ou d'authentification Firebase:", error);
                 document.getElementById('loading-indicator').textContent = "Erreur de connexion aux services de données: " + error.message;
             }
         }
@@ -373,13 +376,13 @@
         // --- FIRESTORE UTILS ---
         // Public collection path for collaborative team data
         function getPublicCollectionRef(collectionName) {
-            // Note: Since we are not using the standard __app_id variable, we use the hardcoded appId for public collections
+            // Utilise le appId dynamique/de repli
             return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
         }
         
         // Private collection for user-specific data (e.g., projection history)
         function getPrivateCollectionRef(collectionName) {
-            // Note: Since we are not using the standard __app_id variable, we use the hardcoded appId for private collections
+            // Utilise le appId dynamique/de repli et le userId actuel
             return collection(db, 'artifacts', appId, 'users', userId, collectionName);
         }
 
