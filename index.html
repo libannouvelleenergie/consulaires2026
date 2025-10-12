@@ -84,6 +84,7 @@
         <div id="splash-login-card" class="w-full max-w-md bg-white shadow-xl rounded-lg p-8 space-y-6">
             <h2 class="text-2xl font-bold text-center text-gray-800">Connexion Équipe</h2>
             
+            <!-- Default Login Form (Visible when members exist) -->
             <div id="splash-login-form" class="space-y-4">
                 <div>
                     <label for="splash-login-member-select" class="block text-sm font-medium text-gray-700">Sélectionner votre nom</label>
@@ -97,6 +98,20 @@
                     <p id="splash-login-error-message" class="text-red-500 text-xs mt-1 hidden">Nom ou clé incorrect(e).</p>
                 </div>
                 <button id="splash-team-login-btn" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Se Connecter</button>
+            </div>
+
+            <!-- Bootstrap Panel (Visible only when no members exist) -->
+            <div id="splash-bootstrap-panel" class="p-4 bg-gray-50 border-2 border-blue-200 border-dashed rounded-lg hidden">
+                <h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
+                <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits Administrateur.</p>
+                <div>
+                    <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <input type="text" id="bootstrap-member-name" placeholder="Ex: Damien" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <button id="bootstrap-add-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-blue-600 text-white text-sm hover:bg-blue-700">Créer & Se Connecter</button>
+                    </div>
+                    <p id="bootstrap-error-message" class="text-red-500 text-xs mt-1 hidden"></p>
+                </div>
             </div>
 
              <!-- Placeholder for critical errors -->
@@ -546,6 +561,8 @@
             if (!db) return;
             const contactRef = doc(getPublicCollectionRef('contacts'), contactId);
             try {
+                // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+                console.warn(`[DELETING] Contact ID: ${contactId}. (Confirmation dialog skipped per platform rule.)`);
                 await deleteDoc(contactRef);
             } catch (e) {
                 console.error("Error deleting document:", e);
@@ -573,7 +590,27 @@
              if (!db) return;
              const memberRef = doc(getPublicCollectionRef('teamMembers'), memberId);
              try {
-                 await deleteDoc(memberRef);
+                // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+                console.warn(`[DELETING] Team Member ID: ${memberId}. This will clear their assignments. (Confirmation dialog skipped per platform rule.)`);
+                
+                // Clear assignments and control fields for affected contacts
+                window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
+                    const contactToUpdate = {...c};
+                    if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
+                    if(contactToUpdate.controlledByMemberId === memberId) {
+                        contactToUpdate.controlledByMemberId = null;
+                        contactToUpdate.controlledByMemberName = null;
+                        contactToUpdate.numeroTelephone = null; 
+                    }
+                    saveContact(contactToUpdate); 
+                });
+                
+                // If the deleted member was logged in, log them out
+                if (window.currentTeamMemberId === memberId) {
+                    handleTeamLogout();
+                }
+
+                await deleteDoc(memberRef);
              } catch (e) {
                  console.error("Error deleting team member:", e);
              }
@@ -590,6 +627,24 @@
 
         // --- MAIN APP LOGIC (Attached to window for global access) ---
         window.updateAll = function() {
+            
+            // New: Bootstrap Logic Check on Splash Screen
+            const splashPanel = document.getElementById('splash-bootstrap-panel');
+            const loginForm = document.getElementById('splash-login-form');
+            const isTeamEmpty = window.teamMembers.length === 0;
+
+            if (splashPanel && loginForm) {
+                 // Show bootstrap panel only if team is empty AND we are not yet logged in as a team member
+                if (isTeamEmpty && !window.currentTeamMemberId) {
+                    splashPanel.classList.remove('hidden');
+                    loginForm.classList.add('hidden');
+                } else {
+                    splashPanel.classList.add('hidden');
+                    loginForm.classList.remove('hidden');
+                }
+            }
+
+
             if (!window.currentTeamMemberId) {
                 // If not logged in as a team member, just update the login select
                 window.updateLoginSelect();
@@ -812,9 +867,9 @@
             if (!window.isAdmin) return;
             const contactId = event.target.dataset.id;
             
-            if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
-                deleteContact(contactId); 
-            }
+            // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+            console.warn(`[DELETING] Contact ID: ${contactId}. (Confirmation dialog skipped per platform rule.)`);
+            deleteContact(contactId); 
         }
 
         document.getElementById('search-contacts').addEventListener('input', (e) => {
@@ -899,27 +954,27 @@
             if (!window.isAdmin) return;
             const memberId = event.target.dataset.id;
             
-            if(window.confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
+            // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+            console.warn(`[DELETING] Team Member ID: ${memberId}. This will clear their assignments. (Confirmation dialog skipped per platform rule.)`);
                 
-                // Clear assignments and control fields for affected contacts
-                window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
-                    const contactToUpdate = {...c};
-                    if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
-                    if(contactToUpdate.controlledByMemberId === memberId) {
-                        contactToUpdate.controlledByMemberId = null;
-                        contactToUpdate.controlledByMemberName = null;
-                        contactToUpdate.numeroTelephone = null; 
-                    }
-                    saveContact(contactToUpdate); 
-                });
-                
-                // If the deleted member was logged in, log them out
-                if (window.currentTeamMemberId === memberId) {
-                    handleTeamLogout();
+            // Clear assignments and control fields for affected contacts
+            window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
+                const contactToUpdate = {...c};
+                if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
+                if(contactToUpdate.controlledByMemberId === memberId) {
+                    contactToUpdate.controlledByMemberId = null;
+                    contactToUpdate.controlledByMemberName = null;
+                    contactToUpdate.numeroTelephone = null; 
                 }
-
-                deleteTeamMember(memberId); 
+                saveContact(contactToUpdate); 
+            });
+            
+            // If the deleted member was logged in, log them out
+            if (window.currentTeamMemberId === memberId) {
+                handleTeamLogout();
             }
+
+            deleteTeamMember(memberId); 
         }
 
         // Team Login Logic (from Splash Screen)
@@ -958,6 +1013,52 @@
                 window.updateAll(); 
             } else {
                 errorEl.textContent = 'Nom ou clé incorrect(e).';
+                errorEl.classList.remove('hidden');
+            }
+        }
+        
+        // Team Bootstrap Logic (from Splash Screen when team list is empty)
+        async function handleBootstrapAddMember() {
+            const nameInput = document.getElementById('bootstrap-member-name');
+            const name = nameInput.value.trim();
+            const errorEl = document.getElementById('bootstrap-error-message');
+            
+            errorEl.classList.add('hidden');
+
+            if (!name) {
+                errorEl.textContent = 'Veuillez entrer un nom.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            
+            // This relies on the addTeamMember logic which sets isAdmin if name is "Damien"
+            const newMemberId = await addTeamMember(name);
+
+            if (newMemberId) {
+                // Find the new member's key and log them in immediately
+                const newMember = window.teamMembers.find(m => m.id === newMemberId);
+                
+                if (newMember) {
+                    // Simulate successful login
+                    window.currentTeamMemberId = newMember.id;
+                    window.currentTeamMemberName = newMember.name;
+                    window.isAdmin = newMember.isAdmin || false; 
+
+                    setupPrivateDataListeners(); // Start private data listener
+
+                    // Show main app, hide splash screen
+                    document.getElementById('login-splash-view').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+
+                    const initialView = window.isAdmin ? 'dashboard' : 'team';
+                    showView(initialView);
+                    window.updateAll(); 
+                } else {
+                     errorEl.textContent = 'Erreur lors de la récupération du nouveau membre. Réessayez.';
+                     errorEl.classList.remove('hidden');
+                }
+            } else {
+                errorEl.textContent = 'Erreur lors de la création du membre dans la base de données.';
                 errorEl.classList.remove('hidden');
             }
         }
@@ -1085,6 +1186,7 @@
 
         // New Login/Logout button handlers
         document.getElementById('splash-team-login-btn').addEventListener('click', handleTeamLogin);
+        document.getElementById('bootstrap-add-member-btn').addEventListener('click', handleBootstrapAddMember);
         document.getElementById('team-logout-btn').addEventListener('click', handleTeamLogout);
         
         document.getElementById('add-team-member-btn').addEventListener('click', handleAddTeamMember);
@@ -1128,19 +1230,20 @@
                 return contact;
             }).filter(c => c.nomUsage || c.prenoms);
             
-            if (window.confirm(`Importer ${newContacts.length} nouveaux contacts ?`)) {
-                let importedCount = 0;
-                for (const contact of newContacts) {
-                    try {
-                        await addDoc(getPublicCollectionRef('contacts'), contact);
-                        importedCount++;
-                    } catch (e) {
-                        console.error("Erreur lors de l'importation d'un contact:", e);
-                    }
+            // Per platform requirements, avoiding window.confirm(). Proceeding directly with import.
+            console.warn(`[IMPORTING] ${newContacts.length} contacts. (Confirmation dialog skipped per platform rule.)`);
+            
+            let importedCount = 0;
+            for (const contact of newContacts) {
+                try {
+                    await addDoc(getPublicCollectionRef('contacts'), contact);
+                    importedCount++;
+                } catch (e) {
+                    console.error("Erreur lors de l'importation d'un contact:", e);
                 }
-                console.log(`${importedCount} contacts importés.`);
-                document.getElementById('csv-file-input').value = '';
             }
+            console.log(`${importedCount} contacts importés.`);
+            document.getElementById('csv-file-input').value = '';
         }
         
         // --- PROJECTION LOGIC ---
