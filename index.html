@@ -87,7 +87,7 @@
             <!-- Bootstrap Panel (Visible by default in HTML, hidden by JS if members are found) -->
             <div id="splash-bootstrap-panel" class="p-4 bg-gray-50 border-2 border-blue-200 border-dashed rounded-lg">
                 <h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
-                <p id="bootstrap-instructions" class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
+                <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
                 <div>
                     <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
                     <div class="mt-1 flex rounded-md shadow-sm">
@@ -114,7 +114,7 @@
                 <button id="splash-team-login-btn" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Se Connecter</button>
             </div>
 
-            <!-- Placeholder for critical errors -->
+             <!-- Placeholder for critical errors -->
             <div id="critical-error-message" class="text-red-600 text-center text-sm hidden"></div>
         </div>
     </div>
@@ -140,10 +140,10 @@
                 <div class="flex items-center justify-center h-16">
                     <div class="flex items-baseline space-x-4">
                         <!-- Dashboard and Projections hidden for non-admins -->
-                        <a href="#" id="nav-dashboard" data-view="dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium hidden">Tableau de Bord</a>
-                        <a href="#" id="nav-contacts" data-view="contacts" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Gestion des Contacts</a>
-                        <a href="#" id="nav-team" data-view="team" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Équipe</a>
-                        <a href="#" id="nav-projections" data-view="projections" class="nav-link px-3 py-2 rounded-md text-sm font-medium hidden">Projections</a>
+                        <a href="#" id="nav-dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium hidden">Tableau de Bord</a>
+                        <a href="#" id="nav-contacts" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Gestion des Contacts</a>
+                        <a href="#" id="nav-team" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Équipe</a>
+                        <a href="#" id="nav-projections" class="nav-link px-3 py-2 rounded-md text-sm font-medium hidden">Projections</a>
                     </div>
                 </div>
             </div>
@@ -260,7 +260,7 @@
                             <div id="admin-team-list-panel" class="hidden">
                                 <h3 class="text-lg font-medium text-gray-700 mt-6">Liste des Membres et Clés</h3>
                                 <div id="team-list" class="space-y-2 pt-2 text-xs">
-                                    <!-- List of team members with keys and delete button -->
+                                   <!-- List of team members with keys and delete button -->
                                 </div>
                             </div>
                         </div>
@@ -320,7 +320,7 @@
                                         <label for="num-lists" class="block text-sm font-medium text-gray-700">Nombre de listes en compétition</label>
                                         <input type="number" id="num-lists" value="4" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                                     </div>
-                                    <div>
+                                     <div>
                                         <label for="objective-seats" class="block text-sm font-medium text-gray-700">Nombre de sièges visés (Objectif)</label>
                                         <input type="number" id="objective-seats" value="1" min="1" max="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                                     </div>
@@ -349,11 +349,11 @@
     <!-- Chart.js for the doughnut chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- FIREBASE IMPORTS (truncated part completed for valid HTML structure) -->
+    <!-- FIREBASE IMPORTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
         // Set Firebase Log Level to debug for development/testing
@@ -409,7 +409,6 @@
         window.currentTeamMemberName = null;
         window.isAdmin = false; // New state for role-based access control
         let historyChartInstance = null; // Instance for the evolution chart
-        let statusChartInstance = null;
 
         const STATUS_OPTIONS = {
             'À contacter': 'À contacter', 'À convaincre': 'À convaincre', 'Probable': 'Probable',
@@ -426,480 +425,63 @@
             'Acquis': 'Acquis', 'Refus': 'Refus'
         };
         
-        // --- DOM Elements ---
-        const $ = id => document.getElementById(id);
-        const views = ['dashboard', 'contacts', 'team', 'projections'];
-
-
         // --- FIRESTORE UTILS ---
         // Public collection path for collaborative team data
         function getPublicCollectionRef(collectionName) {
-            if (db) {
-                return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
-            }
-            console.error("Firestore DB is not initialized.");
-            return null;
+            return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
         }
         
         // Private collection for user-specific data (e.g., projection history)
         function getPrivateCollectionRef(collectionName) {
-            if (db) {
-                return collection(db, 'artifacts', appId, 'users', userId, collectionName);
-            }
-            console.error("Firestore DB is not initialized.");
-            return null;
+            return collection(db, 'artifacts', appId, 'users', userId, collectionName);
         }
 
-        // --- AUTH & MEMBER MANAGEMENT UTILS ---
-        function generateSecretKey(length = 8) {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-
-        function setCurrentUser(member) {
-            window.currentTeamMemberId = member.id;
-            window.currentTeamMemberName = member.name;
-            window.isAdmin = member.isAdmin || false;
+        // --- FIRESTORE LISTENERS (Real-time updates) ---
+        function loadPublicData() {
+            if (!db) return;
             
-            // Masquer la vue de connexion et afficher la vue principale
-            $('login-splash-view').classList.add('hidden');
-            $('app-container').classList.remove('hidden');
-
-            // Mise à jour de l'affichage de l'utilisateur
-            $('user-id').textContent = member.name;
-            const statusEl = $('team-member-status');
-            statusEl.textContent = member.isAdmin ? 'Admin' : 'Membre';
-            statusEl.classList.remove('hidden', 'bg-yellow-100', 'text-yellow-800', 'bg-blue-100', 'text-blue-800');
-            statusEl.classList.add(member.isAdmin ? 'bg-red-100' : 'bg-blue-100', member.isAdmin ? 'text-red-800' : 'text-blue-800');
-            $('current-member-info').textContent = `Connecté en tant que: ${member.name}`;
-
-            // Afficher les vues admin/cacher pour les non-admins
-            $('nav-dashboard').classList.toggle('hidden', !window.isAdmin);
-            $('nav-projections').classList.toggle('hidden', !window.isAdmin);
-            $('admin-member-creation-panel').classList.toggle('hidden', !window.isAdmin);
-            $('admin-team-list-panel').classList.toggle('hidden', !window.isAdmin);
-            $('admin-view-selector').classList.toggle('hidden', !window.isAdmin);
-
-
-            setupPrivateDataListeners(); // Démarrer l'écoute des données privées de ce membre
-            switchView(window.isAdmin ? 'dashboard' : 'team'); // Afficher la vue appropriée après connexion
-        }
-
-        function handleLogout() {
-            window.currentTeamMemberId = null;
-            window.currentTeamMemberName = null;
-            window.isAdmin = false;
-            $('app-container').classList.add('hidden');
-            $('login-splash-view').classList.remove('hidden');
-            window.updateLoginSelect(); // Réinitialiser le sélecteur de connexion
-            showMessageBox('Déconnexion', 'Vous êtes déconnecté de l\'équipe.', 'info');
-        }
-
-        // --- VIEW CONTROLS ---
-
-        function switchView(viewName) {
-            views.forEach(view => {
-                $(`${view}-view`).classList.add('hidden');
-                $(`nav-${view}`).classList.remove('active');
-            });
+            // 1. Listen for Team Members (Public/Shared data)
+            onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
+                window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                window.updateAll();
+                window.updateLoginSelect(); // Keep the splash screen's select up to date
+            }, (error) => console.error("Error fetching team members:", error));
             
-            $(`${viewName}-view`).classList.remove('hidden');
-            $(`nav-${viewName}`).classList.add('active');
+            // 2. Listen for Contacts (Public/Shared data)
+            onSnapshot(getPublicCollectionRef('contacts'), (snapshot) => {
+                window.contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                window.updateAll();
+            }, (error) => console.error("Error fetching contacts:", error));
 
-            if (viewName === 'team') {
-                updateTeamView();
-            } else if (viewName === 'dashboard') {
-                updateDashboardView();
-            }
-            // Ajoutez d'autres mises à jour de vue ici
         }
 
-        function updateLoginSelect() {
-            const selectEl = $('splash-login-member-select');
-            selectEl.innerHTML = '';
-
-            if (window.teamMembers.length === 0) {
-                // Si la liste est vide, on affiche le panneau de bootstrap
-                $('splash-bootstrap-panel').classList.remove('hidden');
-                $('splash-login-form').classList.add('hidden');
+        function setupPrivateDataListeners() {
+            if (!db || !window.isAuthReady) return;
+            
+            // 3. Listen for Projection History (User-specific private data)
+            // Cet écouteur ne démarre qu'après une connexion réussie et l'authentification de l'utilisateur
+            onSnapshot(getPrivateCollectionRef('projectionHistory'), (snapshot) => {
+                window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
                 
-                // Mettre à jour les instructions de bootstrap pour la règle de sécurité si une erreur persiste
-                if (window.isAuthReady) {
-                    $('bootstrap-instructions').innerHTML = `
-                        Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.
-                        <p class="text-red-500 text-xs mt-2 font-semibold">
-                            Si vous avez une erreur de 'Permissions' après le clic, vous devez mettre à jour les règles Firestore.
-                        </p>`;
+                const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
+                if (lastHistory && lastHistory.goal) {
+                    window.votesGoal = lastHistory.goal;
                 }
-
-            } else {
-                // Si des membres existent, on affiche le formulaire de connexion
-                $('splash-bootstrap-panel').classList.add('hidden');
-                $('splash-login-form').classList.remove('hidden');
-                
-                // Remplir le sélecteur
-                const defaultOption = document.createElement('option');
-                defaultOption.value = "";
-                defaultOption.textContent = "-- Sélectionnez votre nom --";
-                selectEl.appendChild(defaultOption);
-
-                window.teamMembers.forEach(member => {
-                    const option = document.createElement('option');
-                    option.value = member.id;
-                    option.textContent = member.name;
-                    selectEl.appendChild(option);
-                });
-            }
-
-            // Mettre à jour le sélecteur admin pour la vue Team
-            const adminSelect = $('admin-team-member-select');
-            adminSelect.innerHTML = '';
-            const allOption = document.createElement('option');
-            allOption.value = 'all';
-            allOption.textContent = 'TOUS LES CONTACTS (Admin)';
-            adminSelect.appendChild(allOption);
-            window.teamMembers.forEach(member => {
-                const option = document.createElement('option');
-                option.value = member.id;
-                option.textContent = member.name;
-                adminSelect.appendChild(option);
-            });
+                window.updateAll();
+            }, (error) => console.error("Error fetching history:", error));
         }
 
-
-        // --- CRUD LOGIC ---
-
-        async function handleBootstrapClick() {
-            const nameInput = $('bootstrap-member-name');
-            const name = nameInput.value.trim();
-            const errorEl = $('bootstrap-error-message');
-            errorEl.classList.add('hidden');
-
-            if (name === "") {
-                errorEl.textContent = "Veuillez entrer un nom.";
-                errorEl.classList.remove('hidden');
-                return;
-            }
-            if (!window.isAuthReady) {
-                 errorEl.textContent = "Authentification Firebase non prête. Veuillez attendre quelques secondes et réessayer.";
-                 errorEl.classList.remove('hidden');
-                 return;
-            }
-
-            const isDamien = name.toLowerCase() === 'damien';
-            const authKey = generateSecretKey(10);
-            
-            const memberData = {
-                name: name,
-                authKey: authKey, // Clé de connexion pour la session suivante
-                isAdmin: isDamien,
-                createdAt: serverTimestamp()
-            };
-
-            try {
-                const teamMembersRef = getPublicCollectionRef('teamMembers');
-                const docRef = await addDoc(teamMembersRef, memberData);
-                
-                // Succès : Simuler la connexion avec le nouveau membre
-                const newMember = { ...memberData, id: docRef.id };
-
-                // Afficher la clé de connexion pour la première fois
-                showMessageBox('Connexion réussie', 
-                    `Le membre "${name}" a été créé. C'est votre CLÉ SECRÈTE de connexion: 
-                     <span class="font-mono text-lg text-blue-800">${authKey}</span>. 
-                     Conservez-la pour les prochaines connexions.`, 'success', true);
-                
-                setCurrentUser(newMember);
-
-            } catch (error) {
-                console.error("Erreur Firestore lors du bootstrap:", error);
-                
-                let userMessage = "Erreur lors de la création du membre dans la base de données. ";
-                if (error.message.includes("permission")) {
-                     userMessage = "Erreur lors de la création du membre dans la base de données. **Missing or insufficient permissions.** Vous devez vérifier et mettre à jour vos règles de sécurité Firestore.";
-                } else {
-                     userMessage += error.message;
-                }
-
-                errorEl.textContent = userMessage;
-                errorEl.classList.remove('hidden');
-            }
-        }
-
-        async function handleTeamLogin() {
-            const selectEl = $('splash-login-member-select');
-            const keyInput = $('splash-auth-key-input');
-            const errorEl = $('splash-login-error-message');
-            errorEl.classList.add('hidden');
-
-            const memberId = selectEl.value;
-            const key = keyInput.value.trim();
-
-            if (!memberId || key === "") {
-                errorEl.textContent = "Veuillez sélectionner un nom et entrer la clé.";
-                errorEl.classList.remove('hidden');
-                return;
-            }
-
-            const member = window.teamMembers.find(m => m.id === memberId && m.authKey === key);
-
-            if (member) {
-                setCurrentUser(member);
-                keyInput.value = ''; // Clear key
-            } else {
-                errorEl.textContent = "Clé de connexion incorrecte pour ce membre.";
-                errorEl.classList.remove('hidden');
-            }
-        }
-        
-        async function handleAddTeamMember() {
-            const nameInput = $('new-team-member');
-            const name = nameInput.value.trim();
-
-            if (!window.isAdmin || name === "") return;
-
-            const isDamien = name.toLowerCase() === 'damien';
-            const authKey = generateSecretKey(10);
-            
-            const memberData = {
-                name: name,
-                authKey: authKey,
-                isAdmin: isDamien,
-                createdAt: serverTimestamp()
-            };
-
-            try {
-                const teamMembersRef = getPublicCollectionRef('teamMembers');
-                await addDoc(teamMembersRef, memberData);
-                nameInput.value = '';
-                showMessageBox('Membre Ajouté', `"${name}" a été ajouté. Clé: ${authKey}`, 'success');
-            } catch (error) {
-                console.error("Erreur d'ajout de membre:", error);
-                showMessageBox('Erreur', "Échec de l'ajout du membre.", 'error');
-            }
-        }
-
-        async function handleDeleteTeamMember(memberId) {
-            if (!window.isAdmin) return;
-
-            // Protection: empêcher un admin de se supprimer lui-même (trop risqué)
-            if (memberId === window.currentTeamMemberId) {
-                showMessageBox('Interdit', "Vous ne pouvez pas vous supprimer vous-même.", 'error');
-                return;
-            }
-
-            try {
-                const teamMembersRef = getPublicCollectionRef('teamMembers');
-                await deleteDoc(doc(teamMembersRef, memberId));
-            } catch (error) {
-                console.error("Erreur de suppression de membre:", error);
-                showMessageBox('Erreur', "Échec de la suppression du membre.", 'error');
-            }
-        }
-        
-        // --- DISPLAY LOGIC ---
-
-        function updateTeamView() {
-            if (!window.currentTeamMemberId) {
-                $('team-contact-placeholder').classList.remove('hidden');
-                $('team-contact-list-container').classList.add('hidden');
-                return;
-            }
-
-            // 1. Affichage de la liste d'équipe (Admin)
-            if (window.isAdmin) {
-                const teamListEl = $('team-list');
-                teamListEl.innerHTML = '';
-                window.teamMembers.forEach(member => {
-                    const el = document.createElement('div');
-                    el.className = 'p-2 bg-gray-50 border rounded-md flex justify-between items-center';
-                    el.innerHTML = `
-                        <div>
-                            <span class="font-semibold text-gray-800">${member.name}</span> 
-                            <span class="text-gray-500 text-xs">(${member.isAdmin ? 'ADMIN' : 'Membre'})</span><br>
-                            <span class="font-mono text-blue-600 text-[10px] break-all">Clé: ${member.authKey}</span>
-                        </div>
-                        <button class="delete-member-btn px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200" data-member-id="${member.id}">
-                            Supprimer
-                        </button>
-                    `;
-                    teamListEl.appendChild(el);
-                });
-                // Ajouter les écouteurs pour les boutons de suppression
-                teamListEl.querySelectorAll('.delete-member-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const memberId = e.currentTarget.dataset.memberId;
-                        // Remplacer confirm() par un showMessageBox qui simule la confirmation
-                        showMessageBox('Confirmation de Suppression', 
-                            `Êtes-vous sûr de vouloir supprimer ${window.teamMembers.find(m => m.id === memberId)?.name} ? Cette action est irréversible.`, 
-                            'warning');
-                        // Pour le test, on va assumer la suppression après ce message, 
-                        // mais une vraie implémentation nécessiterait une modale avec un bouton "Confirmer"
-                        // handleDeleteTeamMember(memberId); 
-                        console.log(`Tentative de suppression de membre: ${memberId}`);
-                    });
-                });
-            }
-
-
-            // 2. Affichage des contacts assignés (TODO: Filter contacts by current user in a future iteration)
-            $('team-contact-placeholder').classList.add('hidden');
-            $('team-contact-list-container').classList.remove('hidden');
-            
-            // Pour l'instant, on affiche tous les contacts pour le test
-            const teamContactsBody = $('team-contacts-table-body');
-            teamContactsBody.innerHTML = '';
-
-            const filteredContacts = window.contacts.filter(c => c.assignedTo === window.currentTeamMemberName || window.isAdmin);
-            
-            if (filteredContacts.length === 0) {
-                 teamContactsBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Aucun contact assigné.</td></tr>`;
-            } else {
-                 // Remplir le tableau des contacts (simplifié pour cet exemple)
-                 filteredContacts.slice(0, 10).forEach(contact => { // Afficher max 10 pour l'exemple
-                    const row = document.createElement('tr');
-                    row.className = 'hover:bg-gray-50';
-                    row.innerHTML = `
-                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.lastName || 'N/A'}</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.firstName || 'N/A'}</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.phone || 'N/A'}</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: ${STATUS_COLORS[contact.status] || '#e5e7eb'}; color: ${contact.status === 'À contacter' ? '#1f2937' : 'white'};">
-                                ${contact.status || 'N/A'}
-                            </span>
-                        </td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm text-center">${contact.hasVoted ? '✅' : '❌'}</td>
-                    `;
-                    teamContactsBody.appendChild(row);
-                });
-            }
-        }
-        
-        function updateDashboardView() {
-            if (!window.isAdmin) return;
-            
-            const totalContacts = window.contacts.length;
-            const certainVotes = window.contacts.filter(c => c.status === 'Acquis').length;
-            const hasVoted = window.contacts.filter(c => c.hasVoted).length;
-
-            $('kpi-total-contacts').textContent = totalContacts;
-            $('kpi-certain-votes').textContent = certainVotes;
-            $('kpi-has-voted').textContent = hasVoted;
-
-            const progress = totalContacts > 0 ? Math.min(100, (certainVotes / window.votesGoal) * 100) : 0;
-            $('goal-progress-bar').style.width = `${progress}%`;
-            $('goal-progress-text').textContent = `${certainVotes} / ${window.votesGoal}`;
-            $('goal-title').textContent = `Objectif de ${window.votesGoal} votes certains`;
-            
-            // Calcul des votes projetés (Simplifié: certain + probable * 0.5)
-            const probableVotes = window.contacts.filter(c => c.status === 'Probable').length;
-            const projectedVotes = Math.round(certainVotes + (probableVotes * 0.5));
-            $('kpi-projected-votes').textContent = projectedVotes;
-            
-            updateStatusChart();
-        }
-
-        function updateStatusChart() {
-            if (!window.isAdmin) return;
-
-            const statusCounts = Object.keys(STATUS_OPTIONS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
-            window.contacts.forEach(c => {
-                if (statusCounts.hasOwnProperty(c.status)) {
-                    statusCounts[c.status]++;
-                }
-            });
-
-            const data = {
-                labels: Object.keys(statusCounts),
-                datasets: [{
-                    label: 'Répartition des Contacts',
-                    data: Object.values(statusCounts),
-                    backgroundColor: Object.values(STATUS_COLORS),
-                    hoverOffset: 4
-                }]
-            };
-
-            const config = {
-                type: 'doughnut',
-                data: data,
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { enabled: true }
-                    }
-                }
-            };
-
-            if (statusChartInstance) {
-                statusChartInstance.data = data;
-                statusChartInstance.update();
-            } else {
-                statusChartInstance = new Chart($('status-chart'), config);
-            }
-        }
-
-        function updateAll() {
-            // Mise à jour de la vue de connexion/bootstrap
-            updateLoginSelect();
-            
-            // Si l'utilisateur est connecté, mettre à jour toutes les vues pertinentes
-            if (window.currentTeamMemberId) {
-                updateTeamView();
-                updateDashboardView();
-            }
-        }
-        window.updateAll = updateAll; // Rendre la fonction accessible globalement pour les listeners
-        window.updateLoginSelect = updateLoginSelect;
-        
-        // Fonction utilitaire pour remplacer alert()
-        function showMessageBox(title, message, type, isHtml = false) {
-            const container = document.body;
-            const box = document.createElement('div');
-            box.className = `fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50`;
-            
-            let color, icon;
-            if (type === 'error') {
-                color = 'bg-red-100 border-red-400 text-red-700';
-                icon = '❌';
-            } else if (type === 'success') {
-                color = 'bg-green-100 border-green-400 text-green-700';
-                icon = '✅';
-            } else if (type === 'warning') {
-                color = 'bg-yellow-100 border-yellow-400 text-yellow-700';
-                icon = '⚠️';
-            } else {
-                color = 'bg-blue-100 border-blue-400 text-blue-700';
-                icon = 'ℹ️';
-            }
-            
-            box.innerHTML = `
-                <div class="${color} border-l-4 p-6 rounded-xl shadow-2xl max-w-md relative">
-                    <p class="font-bold text-xl mb-2">${icon} ${title}</p>
-                    <div class="mt-1 text-sm">${isHtml ? message : message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                    <button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="this.closest('.fixed').remove()">
-                        Compris
-                    </button>
-                </div>
-            `;
-            container.appendChild(box);
-        }
 
         // --- FIREBASE INITIALIZATION & AUTH ---
         async function initializeFirebase() {
             console.log("Configuration Firebase finale utilisée:", firebaseConfig);
 
-            // Vérification critique
             if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
                 const errorMsg = "Erreur critique: apiKey, authDomain, ou projectId manquant. Vérifiez vos variables.";
                 console.error(errorMsg);
-                $('critical-error-message').textContent = errorMsg;
-                $('critical-error-message').classList.remove('hidden');
-                $('splash-login-card').classList.add('hidden');
+                document.getElementById('critical-error-message').textContent = errorMsg;
+                document.getElementById('critical-error-message').classList.remove('hidden');
+                document.getElementById('splash-login-card').classList.add('hidden');
                 return;
             }
 
@@ -908,133 +490,1018 @@
                 db = getFirestore(app);
                 auth = getAuth(app); 
                 
-                // 1. Authentification
+                // 1. Authentification en utilisant le jeton personnalisé (Canvas) ou l'anonyme
                 if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
+                     // Utilisation du jeton fourni par l'environnement Canvas pour une connexion fiable
+                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await signInAnonymously(auth);
+                     // Fallback: Authentification anonyme
+                     await signInAnonymously(auth);
                 }
                 
                 userId = auth.currentUser?.uid || crypto.randomUUID(); 
                 window.isAuthReady = true;
 
-                // 2. Démarrer l'écoute des données publiques
+                // 2. Démarrer l'écoute des données publiques (membres d'équipe, contacts) immédiatement.
                 loadPublicData();
                 
-                $('loading-indicator').classList.add('hidden');
-                $('user-id').textContent = userId.substring(0, 8) + '...';
+                // 3. Cacher l'indicateur de chargement
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('user-id').textContent = 'Non Connecté';
 
-                // 3. Écouteur de l'état d'authentification (pour associer le membre)
+                // 4. L'écouteur d'état d'authentification gère le changement d'ID utilisateur
                 onAuthStateChanged(auth, (user) => {
-                    if (user && window.isAuthReady) {
-                        // L'utilisateur Firebase est connecté. Nous devons maintenant le lier à un membre de l'équipe (TeamMember)
-                        
-                        // Si l'utilisateur est déjà connecté en tant que membre d'équipe, on ne fait rien
-                        if (window.currentTeamMemberId) return;
+                    if (user) {
+                        userId = user.uid; 
+                        // Note: setupPrivateDataListeners() sera appelé après la connexion manuelle réussie
                     }
                 });
+
+                // 5. Assurer que le splash screen est visible pour la connexion manuelle
+                document.getElementById('login-splash-view').classList.remove('hidden');
+                
+                // Initial update to set correct visibility based on teamMembers[] status
+                window.updateAll(); 
 
             } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                $('critical-error-message').textContent = "Erreur de connexion Firebase: " + error.message;
-                $('critical-error-message').classList.remove('hidden');
+                console.error("Erreur d'initialisation ou d'authentification Firebase:", error);
+                
+                let displayMessage = "Erreur de connexion aux services de données: " + error.message;
+
+                if (error.code === 'auth/configuration-not-found' || error.message.includes('auth/configuration-not-found')) {
+                     displayMessage = `Erreur critique : Firebase Auth Configuration Not Found. Veuillez **activer la méthode de connexion Anonyme** dans votre console Firebase.`;
+                }
+
+                document.getElementById('critical-error-message').innerHTML = displayMessage;
+                document.getElementById('critical-error-message').classList.remove('hidden');
             }
         }
-
-        // --- FIRESTORE LISTENERS (Real-time updates) ---
-        function loadPublicData() {
+        
+        // --- FIRESTORE ACTIONS ---
+        async function saveContact(contact) {
             if (!db) return;
-            
-            // 1. Listen for Team Members (Public/Shared data)
-            const teamMembersRef = getPublicCollectionRef('teamMembers');
-            if (teamMembersRef) {
-                onSnapshot(teamMembersRef, (snapshot) => {
-                    window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    // Vérifier si un membre est déjà connecté après le bootstrap réussi
-                    if (window.currentTeamMemberId) {
-                         const connectedMember = window.teamMembers.find(m => m.id === window.currentTeamMemberId);
-                         if (connectedMember) {
-                            setCurrentUser(connectedMember); // Rafraîchir l'état si l'ID est toujours présent
-                         } else {
-                            // Le membre a été supprimé ou l'état est cassé, forcer la déconnexion
-                            handleLogout();
-                         }
-                    }
-                    window.updateAll();
-                }, (error) => {
-                    console.error("Error fetching team members:", error);
-                    // Si l'erreur persiste et qu'il n'y a pas de membres, c'est une erreur de permission
-                    if (window.teamMembers.length === 0 && error.message.includes("permission")) {
-                        $('bootstrap-instructions').innerHTML = `
-                            Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.
-                            <p class="text-red-500 text-xs mt-2 font-semibold">
-                                ⚠️ **Erreur de Permissions Firestore.** Vous devez mettre à jour les règles de sécurité dans votre console Firebase.
-                            </p>`;
-                    }
-                });
+            const contactRef = doc(getPublicCollectionRef('contacts'), contact.id);
+            try {
+                const dataToSave = {
+                    ...contact,
+                    numeroTelephone: contact.numeroTelephone || null,
+                    assignedTo: contact.assignedTo || null,
+                    controlledByMemberId: contact.controlledByMemberId || null,
+                    controlledByMemberName: contact.controlledByMemberName || null,
+                };
+                delete dataToSave.id;
+                await setDoc(contactRef, dataToSave);
+            } catch (e) {
+                console.error("Error saving document:", e);
             }
-            
-            // 2. Listen for Contacts (Public/Shared data)
-            const contactsRef = getPublicCollectionRef('contacts');
-            if (contactsRef) {
-                onSnapshot(contactsRef, (snapshot) => {
-                    window.contacts = snapshot.docs.map(doc => ({ 
-                        id: doc.id, 
-                        ...doc.data(), 
-                        hasVoted: doc.data().hasVoted || false // S'assurer que hasVoted existe
-                    }));
-                    window.updateAll();
-                }, (error) => console.error("Error fetching contacts:", error));
+        }
+        
+        async function deleteContact(contactId) {
+            if (!db) return;
+            const contactRef = doc(getPublicCollectionRef('contacts'), contactId);
+            try {
+                // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+                console.warn(`[DELETING] Contact ID: ${contactId}. (Confirmation dialog skipped per platform rule.)`);
+                await deleteDoc(contactRef);
+            } catch (e) {
+                console.error("Error deleting document:", e);
             }
         }
 
-        function setupPrivateDataListeners() {
-            if (!db || !window.isAuthReady) return;
-            
-            // 3. Listen for Projection History (User-specific private data)
-            const historyRef = getPrivateCollectionRef('projectionHistory');
-            if (historyRef) {
-                onSnapshot(historyRef, (snapshot) => {
-                    window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
-                    
-                    const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
-                    if (lastHistory && lastHistory.goal) {
-                        window.votesGoal = lastHistory.goal;
+        async function addTeamMember(name) {
+             if (!db) return;
+             // Set isAdmin: true if the name is Damien (case-insensitive)
+             const isAdmin = name.trim().toLowerCase() === 'damien';
+             const newAuthKey = crypto.randomUUID().substring(0, 8); // Generate key only once
+             try {
+                 const memberData = {
+                     name: name,
+                     authKey: newAuthKey,
+                     isAdmin: isAdmin // New field for role-based access control
+                 };
+                 const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), memberData);
+                 return { id: newDoc.id, ...memberData }; // Return the full member object
+             } catch (e) {
+                 console.error("Error adding team member:", e);
+                 return null;
+             }
+        }
+
+        async function deleteTeamMember(memberId) {
+             if (!db) return;
+             const memberRef = doc(getPublicCollectionRef('teamMembers'), memberId);
+             try {
+                // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+                console.warn(`[DELETING] Team Member ID: ${memberId}. This will clear their assignments. (Confirmation dialog skipped per platform rule.)`);
+                
+                // Clear assignments and control fields for affected contacts
+                window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
+                    const contactToUpdate = {...c};
+                    if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
+                    if(contactToUpdate.controlledByMemberId === memberId) {
+                        contactToUpdate.controlledByMemberId = null;
+                        contactToUpdate.controlledByMemberName = null;
+                        contactToUpdate.numeroTelephone = null; 
                     }
-                    window.updateAll();
-                }, (error) => console.error("Error fetching history:", error));
+                    saveContact(contactToUpdate); 
+                });
+                
+                // If the deleted member was logged in, log them out
+                if (window.currentTeamMemberId === memberId) {
+                    handleTeamLogout();
+                }
+
+                await deleteDoc(memberRef);
+             } catch (e) {
+                 console.error("Error deleting team member:", e);
+             }
+        }
+        
+        async function addProjectionHistory(data) {
+             if (!db) return;
+             try {
+                 await addDoc(getPrivateCollectionRef('projectionHistory'), data);
+             } catch (e) {
+                 console.error("Error adding history:", e);
+             }
+        }
+
+        // --- MAIN APP LOGIC (Attached to window for global access) ---
+        window.updateAll = function() {
+            
+            // New: Bootstrap Logic Check on Splash Screen
+            const splashPanel = document.getElementById('splash-bootstrap-panel');
+            const loginForm = document.getElementById('splash-login-form');
+            const isTeamEmpty = window.teamMembers.length === 0;
+
+            if (splashPanel && loginForm) {
+                 // Show bootstrap panel only if team is empty AND we are not yet logged in as a team member
+                if (isTeamEmpty && !window.currentTeamMemberId) {
+                    splashPanel.classList.remove('hidden');
+                    loginForm.classList.add('hidden');
+                } else {
+                    // Hide the bootstrap panel content, unless it's showing a success message
+                    if (!splashPanel.querySelector('.p-4.bg-green-100')) {
+                        splashPanel.classList.add('hidden');
+                    }
+                    loginForm.classList.remove('hidden');
+                }
+            }
+
+
+            if (!window.currentTeamMemberId) {
+                // If not logged in as a team member, just update the login select
+                window.updateLoginSelect();
+                return;
+            }
+            
+            // If logged in, update app components
+            window.renderContacts();
+            window.updateDashboard();
+            window.updateTeamStatusDisplay();
+            window.toggleNavVisibility(window.isAdmin);
+
+            if (!document.getElementById('team-view').classList.contains('hidden')) {
+                window.renderTeamView();
+            }
+             if (!document.getElementById('projections-view').classList.contains('hidden')) {
+                window.updateHistoryChart();
             }
         }
 
-        // --- EVENT LISTENERS SETUP ---
-        function setupEventListeners() {
-            // Navigation
-            document.querySelectorAll('#main-nav a').forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    switchView(e.currentTarget.dataset.view);
+        // Toggles visibility of Dashboard and Projections in the navigation
+        window.toggleNavVisibility = function(isAdmin) {
+            document.getElementById('nav-dashboard').classList.toggle('hidden', !isAdmin);
+            document.getElementById('nav-projections').classList.toggle('hidden', !isAdmin);
+        }
+
+        window.updateTeamStatusDisplay = function() {
+            const userIdDisplayEl = document.getElementById('user-id');
+            const statusEl = document.getElementById('team-member-status');
+            const memberInfoEl = document.getElementById('current-member-info');
+            const adminInfoEl = document.getElementById('is-admin-info');
+
+            if (window.currentTeamMemberId) {
+                // Afficher le nom du membre au lieu du Firebase UID
+                userIdDisplayEl.textContent = window.currentTeamMemberName;
+                
+                statusEl.classList.remove('hidden', 'bg-yellow-100', 'text-yellow-800');
+                statusEl.classList.add('bg-green-100', 'text-green-800');
+                statusEl.textContent = `Connecté: ${window.currentTeamMemberName}`;
+                
+                memberInfoEl.textContent = `Connecté en tant que: ${window.currentTeamMemberName}`;
+                
+                adminInfoEl.classList.toggle('hidden', !window.isAdmin);
+
+            } else {
+                userIdDisplayEl.textContent = 'Non Connecté'; // Afficher 'Non Connecté' si déconnecté
+                statusEl.classList.add('hidden');
+                memberInfoEl.textContent = 'Non connecté.';
+                adminInfoEl.classList.add('hidden');
+            }
+        }
+        
+        window.updateDashboard = function() {
+            const totalContacts = window.contacts.length;
+            const statusCounts = window.contacts.reduce((acc, contact) => {
+                acc[contact.status] = (acc[contact.status] || 0) + 1;
+                return acc;
+            }, {});
+
+            const certainVotes = statusCounts['Acquis'] || 0;
+            const hasVoted = statusCounts['A voté'] || 0;
+
+            const projectedVotes = Math.round(
+                certainVotes +
+                (statusCounts['Probable'] || 0) * 0.7 +
+                (statusCounts['À convaincre'] || 0) * 0.2
+            );
+
+            document.getElementById('kpi-total-contacts').textContent = totalContacts;
+            document.getElementById('kpi-certain-votes').textContent = certainVotes;
+            document.getElementById('kpi-has-voted').textContent = hasVoted;
+            document.getElementById('kpi-projected-votes').textContent = projectedVotes + hasVoted;
+
+            const goal = window.votesGoal;
+            const currentCertain = certainVotes + hasVoted;
+            const progress = Math.min((currentCertain / goal) * 100, 100);
+            const progressBar = document.getElementById('goal-progress-bar');
+            
+            document.getElementById('goal-title').textContent = `Objectif de ${goal.toLocaleString()} votes certains`;
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = progress > 10 ? `${Math.round(progress)}%` : '';
+            document.getElementById('goal-progress-text').textContent = `${currentCertain.toLocaleString()} / ${goal.toLocaleString()}`;
+
+            window.updateStatusChart(statusCounts);
+            window.updateBirthdayAlerts();
+        }
+
+        window.updateStatusChart = function(statusCounts) {
+            let statusChart = window.statusChart; // Access global chart instance
+            const ctx = document.getElementById('status-chart').getContext('2d');
+            const labels = Object.keys(STATUS_OPTIONS);
+            const data = labels.map(label => statusCounts[label] || 0);
+            const backgroundColors = labels.map(label => STATUS_COLORS[label]);
+
+            if (statusChart) {
+                statusChart.data.labels = labels;
+                statusChart.data.datasets[0].data = data;
+                statusChart.data.datasets[0].backgroundColor = backgroundColors;
+                statusChart.update();
+            } else {
+                window.statusChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels, datasets: [{ data, backgroundColor: backgroundColors, borderWidth: 1 }] },
+                    options: { responsive: true, plugins: { legend: { position: 'top' }, title: { display: false } } }
                 });
+            }
+        }
+        
+        window.updateBirthdayAlerts = function() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const thirtyDaysFromNow = new Date(today);
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+            const upcomingBirthdays = window.contacts.filter(c => {
+                if (!c.dateNaissance) return false;
+                try {
+                    const parts = c.dateNaissance.split('/');
+                    if (parts.length !== 3) return false;
+                    const [day, month, year] = parts.map(p => parseInt(p, 10));
+                    if(isNaN(day) || isNaN(month) || isNaN(year)) return false;
+
+                    let birthDate = new Date(today.getFullYear(), month - 1, day);
+                    if(birthDate < today) {
+                       birthDate.setFullYear(today.getFullYear() + 1);
+                    }
+                    return birthDate >= today && birthDate <= thirtyDaysFromNow;
+                } catch(e) { return false; }
+            }).sort((a,b) => {
+                const partsA = a.dateNaissance.split('/');
+                const partsB = b.dateNaissance.split('/');
+                if(partsA.length < 3 || partsB.length < 3) return 0;
+
+                const [dayA, monthA] = partsA;
+                const [dayB, monthB] = partsB;
+                let dateA = new Date(today.getFullYear(), parseInt(monthA)-1, parseInt(dayA));
+                let dateB = new Date(today.getFullYear(), parseInt(monthB)-1, parseInt(dayB));
+                if(dateA < today) dateA.setFullYear(today.getFullYear() + 1);
+                if(dateB < today) dateB.setFullYear(today.getFullYear() + 1);
+                return dateA - dateB;
+            });
+            
+            const birthdayListEl = document.getElementById('birthday-list');
+            birthdayListEl.innerHTML = upcomingBirthdays.length > 0
+                ? upcomingBirthdays.map(c => {
+                    const parts = c.dateNaissance.split('/');
+                    if(parts.length < 3) return '';
+                    const [day, month, year] = parts;
+                    const age = today.getFullYear() - parseInt(year, 10);
+                    return `<div class="flex justify-between items-center text-sm">
+                                <p class="font-medium text-gray-800">${c.prenoms} ${c.nomUsage}</p>
+                                <p class="text-gray-500">${day}/${month} (aura ${age + 1} ans)</p>
+                            </div>`;
+                  }).join('')
+                : '<p class="text-gray-500">Aucun anniversaire dans les 30 prochains jours.</p>';
+        }
+
+        // --- CONTACTS MANAGEMENT ---
+        window.renderContacts = function(filteredContacts = null) {
+            // RBAC: Non-admin users only see contacts assigned to them
+            const isContactAccessRestricted = !window.isAdmin && !document.getElementById('team-view').classList.contains('hidden');
+
+            const tableBody = document.getElementById('contacts-table-body');
+            tableBody.innerHTML = '';
+            
+            let contactsToRender = filteredContacts || window.contacts;
+            
+            if (isContactAccessRestricted) {
+                // If on 'team' view AND not admin, only show self-assigned contacts in the general list (for coherence, though they use the team list primarily)
+                contactsToRender = contactsToRender.filter(c => c.assignedTo === window.currentTeamMemberId);
+            }
+            
+            const teamMembersOptions = window.teamMembers.map(tm => `<option value="${tm.id}">${tm.name}</option>`).join('');
+
+            contactsToRender.forEach(contact => {
+                const row = document.createElement('tr');
+                const contactTeamOptions = window.teamMembers.map(tm => 
+                    `<option value="${tm.id}" ${contact.assignedTo == tm.id ? 'selected' : ''}>${tm.name}</option>`
+                ).join('');
+                
+                const deleteButton = window.isAdmin ? `<button data-id="${contact.id}" class="delete-btn text-red-600 hover:text-red-900">Supprimer</button>` : '';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.prenoms}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.email || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.numeroTelephone || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="color: ${STATUS_COLORS[contact.status]}; background-color: ${STATUS_COLORS[contact.status]}20;">${contact.status}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
+                         <select data-id="${contact.id}" class="assign-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-xs" ${!window.isAdmin ? 'disabled' : ''}>
+                            <option value="">Non assigné</option>
+                            ${contactTeamOptions}
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${deleteButton}
+                    </td>
+                `;
+                tableBody.appendChild(row);
             });
 
-            // Splash Screen buttons
-            $('bootstrap-add-member-btn').addEventListener('click', handleBootstrapClick);
-            $('splash-team-login-btn').addEventListener('click', handleTeamLogin);
-            
-            // Main App buttons
-            $('team-logout-btn').addEventListener('click', handleLogout);
-            $('add-team-member-btn').addEventListener('click', handleAddTeamMember);
-            
-            // Set initial active view (Team view is the default landing after login)
-            const defaultView = window.isAdmin ? 'dashboard' : 'contacts';
-            views.forEach(view => $(`nav-${view}`).classList.remove('active'));
-            $(`nav-team`).classList.add('active'); // Default selected tab
+            document.querySelectorAll('.assign-select').forEach(select => select.addEventListener('change', handleAssignContact));
+            document.querySelectorAll('.delete-btn').forEach(button => button.addEventListener('click', handleDeleteContact));
+        }
+        
+        function handleAssignContact(event) {
+            if (!window.isAdmin) return;
+            const contactId = event.target.dataset.id;
+            const newMemberId = event.target.value; 
+            const contact = window.contacts.find(c => c.id == contactId);
+
+            if (contact) {
+                const contactToUpdate = {...contact};
+                contactToUpdate.assignedTo = newMemberId || null;
+                saveContact(contactToUpdate);
+            }
         }
 
+        function handleDeleteContact(event) {
+            if (!window.isAdmin) return;
+            const contactId = event.target.dataset.id;
+            
+            // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+            console.warn(`[DELETING] Contact ID: ${contactId}. (Confirmation dialog skipped per platform rule.)`);
+            deleteContact(contactId); 
+        }
 
-        window.onload = () => {
-            initializeFirebase(); // Démarre la connexion Firebase et l'écoute des données publiques
-            setupEventListeners(); // Configure les gestionnaires d'événements
-        };
+        document.getElementById('search-contacts').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = window.contacts.filter(c => 
+                (c.nomUsage && c.nomUsage.toLowerCase().includes(searchTerm)) ||
+                (c.prenoms && c.prenoms.toLowerCase().includes(searchTerm)) ||
+                (c.email && c.email.toLowerCase().includes(searchTerm)) ||
+                (c.numeroTelephone && c.numeroTelephone.toLowerCase().includes(searchTerm))
+            );
+            window.renderContacts(searchTerm.length > 2 ? filtered : null);
+        });
+        
+        // --- TEAM MANAGEMENT ---
+        
+        window.updateLoginSelect = function() {
+            const loginSelect = document.getElementById('splash-login-member-select');
+            
+            // Only update if we are on the splash screen
+            if (loginSelect) {
+                loginSelect.innerHTML = '<option value="">-- Sélectionnez un responsable --</option>';
+                 window.teamMembers.forEach(member => {
+                    loginSelect.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+                });
+            }
+        }
+
+        window.renderTeamView = function() {
+            const adminSelect = document.getElementById('admin-team-member-select');
+            const teamListDiv = document.getElementById('team-list');
+            const adminCreationPanel = document.getElementById('admin-member-creation-panel');
+            const adminTeamListPanel = document.getElementById('admin-team-list-panel');
+            const adminViewSelector = document.getElementById('admin-view-selector');
+            
+            // RBAC: Show/Hide admin panels
+            adminCreationPanel.classList.toggle('hidden', !window.isAdmin);
+            adminTeamListPanel.classList.toggle('hidden', !window.isAdmin);
+            
+            // RBAC: Show Admin view selector if admin, and if the admin is currently viewing the list
+            const adminSelectedMemberId = adminSelect.value;
+            adminViewSelector.classList.toggle('hidden', !window.isAdmin);
+
+            adminSelect.innerHTML = '<option value="">-- Vue Admin: Sélectionner un membre --</option>';
+            teamListDiv.innerHTML = '';
+
+            window.teamMembers.forEach(member => {
+                // For Admin View Selector
+                adminSelect.innerHTML += `<option value="${member.id}" ${adminSelectedMemberId === member.id ? 'selected' : ''}>${member.name}</option>`;
+                
+                // For Admin List Display
+                const assignedCount = window.contacts.filter(c => c.assignedTo === member.id).length;
+                teamListDiv.innerHTML += `<div class="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
+                                            <div>
+                                                <span class="font-semibold">${member.name} (${assignedCount} contacts)</span><br>
+                                                <span class="text-gray-500">Clé: 
+                                                    <span class="font-mono text-blue-600">${member.authKey || 'N/A'}</span>
+                                                </span>
+                                                ${member.isAdmin ? '<span class="text-green-600 ml-2 font-bold">ADMIN</span>' : ''}
+                                            </div>
+                                            <button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold ml-4" ${!window.isAdmin ? 'disabled' : ''}>X</button>
+                                          </div>`;
+            });
+            
+            document.querySelectorAll('.delete-member-btn').forEach(btn => btn.addEventListener('click', handleDeleteTeamMember));
+
+            // Determine which list to render: Logged-in member's list takes priority
+            const memberIdToRender = window.currentTeamMemberId || adminSelectedMemberId;
+            
+            window.renderAssignedContacts(memberIdToRender);
+        }
+
+        async function handleAddTeamMember() {
+            if (!window.isAdmin) return;
+            const input = document.getElementById('new-team-member');
+            if (input.value.trim()) {
+                const name = input.value.trim();
+                const newMember = await addTeamMember(name);
+                
+                if (newMember) {
+                    input.value = '';
+                    // Temporary confirmation message with the key
+                    const teamListDiv = document.getElementById('team-list');
+                    const tempMessage = document.createElement('div');
+                    tempMessage.className = 'p-3 my-2 bg-yellow-100 border border-yellow-400 rounded text-xs text-yellow-800 font-semibold';
+                    tempMessage.innerHTML = `Clé de ${newMember.name} (à copier) : <span class="font-mono text-base">${newMember.authKey}</span>`;
+                    teamListDiv.prepend(tempMessage);
+
+                    setTimeout(() => tempMessage.remove(), 7000); // Remove message after 7 seconds
+                }
+            }
+        }
+
+        function handleDeleteTeamMember(event) {
+            if (!window.isAdmin) return;
+            const memberId = event.target.dataset.id;
+            
+            // Per platform requirements, avoiding window.confirm(). Proceeding directly with deletion.
+            console.warn(`[DELETING] Team Member ID: ${memberId}. This will clear their assignments. (Confirmation dialog skipped per platform rule.)`);
+                
+            // Clear assignments and control fields for affected contacts
+            window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
+                const contactToUpdate = {...c};
+                if(contactToUpdate.assignedTo === memberId) contactToUpdate.assignedTo = null; 
+                if(contactToUpdate.controlledByMemberId === memberId) {
+                    contactToUpdate.controlledByMemberId = null;
+                    contactToUpdate.controlledByMemberName = null;
+                    contactToUpdate.numeroTelephone = null; 
+                }
+                saveContact(contactToUpdate); 
+            });
+            
+            // If the deleted member was logged in, log them out
+            if (window.currentTeamMemberId === memberId) {
+                handleTeamLogout();
+            }
+
+            deleteTeamMember(memberId); 
+        }
+
+        // Team Login Logic (from Splash Screen)
+        function handleTeamLogin() {
+            const memberId = document.getElementById('splash-login-member-select').value;
+            const authKey = document.getElementById('splash-auth-key-input').value.trim();
+            const errorEl = document.getElementById('splash-login-error-message');
+            
+            errorEl.classList.add('hidden');
+
+            if (!memberId || !authKey) {
+                errorEl.textContent = 'Veuillez sélectionner un nom et entrer une clé.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const member = window.teamMembers.find(m => m.id === memberId);
+            
+            if (member && member.authKey === authKey) {
+                window.currentTeamMemberId = member.id;
+                window.currentTeamMemberName = member.name;
+                window.isAdmin = member.isAdmin || false; // Set admin status
+
+                // Setup private data listeners (like projection history) now that we have a persistent user ID
+                setupPrivateDataListeners();
+
+                document.getElementById('splash-auth-key-input').value = ''; // Clear key input
+                
+                // Show main app, hide splash screen
+                document.getElementById('login-splash-view').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+
+                // Force non-admin users to the Team view
+                const initialView = window.isAdmin ? 'dashboard' : 'team';
+                showView(initialView);
+                window.updateAll(); 
+            } else {
+                errorEl.textContent = 'Nom ou clé incorrect(e).';
+                errorEl.classList.remove('hidden');
+            }
+        }
+        
+        // Team Bootstrap Logic (from Splash Screen when team list is empty)
+        async function handleBootstrapAddMember() {
+            const nameInput = document.getElementById('bootstrap-member-name');
+            const name = nameInput.value.trim();
+            const errorEl = document.getElementById('bootstrap-error-message');
+            
+            errorEl.classList.add('hidden');
+
+            if (!name) {
+                errorEl.textContent = 'Veuillez entrer un nom.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            
+            // This relies on the addTeamMember logic which sets isAdmin if name is "Damien"
+            const newMember = await addTeamMember(name); // Now returns the member object
+            const newMemberId = newMember ? newMember.id : null;
+
+            if (newMemberId) {
+                
+                if (newMember) {
+                    // Simulate successful login
+                    window.currentTeamMemberId = newMember.id;
+                    window.currentTeamMemberName = newMember.name;
+                    window.isAdmin = newMember.isAdmin || false; 
+
+                    setupPrivateDataListeners(); // Start private data listener
+
+                    // *** NEW KEY DISPLAY LOGIC (Success Message) ***
+                    const bootstrapPanel = document.getElementById('splash-bootstrap-panel');
+                    bootstrapPanel.innerHTML = `<div class="p-4 bg-green-100 border-2 border-green-400 rounded-lg">
+                        <h3 class="text-lg font-bold text-green-800">Compte Admin Créé!</h3>
+                        <p class="text-sm text-green-700">Votre clé de connexion secrète est : 
+                            <span class="font-mono text-xl bg-white p-1 rounded font-bold text-blue-800">${newMember.authKey}</span>
+                        </p>
+                        <p class="text-xs text-green-700 mt-2">Notez-la pour les futures connexions (utilisez l'option "Sélectionner votre nom" ci-dessous).</p>
+                        <button onclick="document.getElementById('login-splash-view').classList.add('hidden'); document.getElementById('app-container').classList.remove('hidden'); showView('${window.isAdmin ? 'dashboard' : 'team'}'); window.updateAll();" 
+                            class="mt-3 w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Accéder à l'application
+                        </button>
+                    </div>`;
+
+
+                    // The user must click the button to proceed, allowing them to copy the key first.
+                    // The rest of the updateAll/showView logic is moved to the button's click handler.
+                    
+                } else {
+                     errorEl.textContent = 'Erreur lors de la récupération du nouveau membre. Réessayez.';
+                     errorEl.classList.remove('hidden');
+                }
+            } else {
+                errorEl.textContent = 'Erreur lors de la création du membre dans la base de données.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function handleTeamLogout() {
+            window.currentTeamMemberId = null;
+            window.currentTeamMemberName = null;
+            window.isAdmin = false;
+            
+            // Hide main app, show splash screen
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('login-splash-view').classList.remove('hidden');
+            
+            window.updateLoginSelect();
+            window.updateTeamStatusDisplay();
+
+            // Reset bootstrap panel if the team is now empty
+            if (window.teamMembers.length === 0) {
+                 // Reload page to reset the splash-bootstrap-panel state or manually reset it
+                 // Manually resetting the content to the original state:
+                 const splashPanel = document.getElementById('splash-bootstrap-panel');
+                 splashPanel.innerHTML = `<h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
+                    <p class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
+                    <div>
+                        <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="text" id="bootstrap-member-name" placeholder="Ex: Damien" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                            <button id="bootstrap-add-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-blue-600 text-white text-sm hover:bg-blue-700">Créer & Se Connecter</button>
+                        </div>
+                        <p id="bootstrap-error-message" class="text-red-500 text-xs mt-1 hidden"></p>
+                    </div>`;
+                // Re-attach event listener
+                document.getElementById('bootstrap-add-member-btn').addEventListener('click', handleBootstrapAddMember);
+            }
+        }
+
+        window.renderAssignedContacts = function(memberId) {
+            const container = document.getElementById('team-contact-list-container');
+            const placeholder = document.getElementById('team-contact-placeholder');
+            const tableBody = document.getElementById('team-contacts-table-body');
+            
+            placeholder.classList.toggle('hidden', !!memberId);
+            container.classList.toggle('hidden', !memberId);
+            
+            if (!memberId) return;
+
+            tableBody.innerHTML = '';
+            // Only show contacts assigned to the current member (or the admin-selected member)
+            const assigned = window.contacts.filter(c => c.assignedTo == memberId);
+            const actingMember = window.teamMembers.find(m => m.id === memberId); 
+            if (!actingMember) return; 
+            
+            const isActingAsSelf = window.currentTeamMemberId === memberId;
+            
+            assigned.forEach(contact => {
+                const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId != memberId;
+                
+                // Disable controls unless acting as self AND it's not controlled by someone else
+                const controlsDisabled = !isActingAsSelf || isControlledByAnother; 
+
+                const row = document.createElement('tr');
+                const statusOptionsHtml = Object.keys(TEAM_STATUS_OPTIONS).map(key => `<option value="${key}" ${contact.status === key ? 'selected' : ''}>${TEAM_STATUS_OPTIONS[key]}</option>`).join('');
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${contact.nomUsage}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${contact.prenoms}</td>
+                    
+                    <!-- PHONE NUMBER INPUT (Control mechanism) -->
+                    <td class="px-6 py-4 text-sm text-gray-500 relative min-w-[150px]">
+                        <input type="tel" data-id="${contact.id}" data-member-id="${memberId}" class="phone-input w-full rounded-md border-gray-300 shadow-sm text-xs px-2 py-1 focus:ring-blue-500 focus:border-blue-500" value="${contact.numeroTelephone || ''}" placeholder="Numéro (Contrôle)" ${controlsDisabled ? 'disabled' : ''}>
+                        ${isControlledByAnother ? `<span class="controlled-message">Géré par ${contact.controlledByMemberName || 'un autre membre'}.</span>` : ''}
+                    </td>
+
+                    <!-- Status Select -->
+                    <td class="px-6 py-4 text-sm text-gray-500"><select data-id="${contact.id}" class="team-status-select w-full rounded-md border-gray-300 shadow-sm text-xs" ${contact.status === 'A voté' || controlsDisabled ? 'disabled' : ''}>${statusOptionsHtml}</select></td>
+                    
+                    <!-- Voted Checkbox -->
+                    <td class="px-6 py-4 text-center"><input type="checkbox" data-id="${contact.id}" class="voted-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded" ${contact.status === 'A voté' || controlsDisabled ? 'checked disabled' : (controlsDisabled ? 'disabled' : '')}></td>`;
+                tableBody.appendChild(row);
+            });
+            
+            document.querySelectorAll('.phone-input:not([disabled])').forEach(input => input.addEventListener('change', handlePhoneNumberChange));
+            document.querySelectorAll('.team-status-select:not([disabled])').forEach(s => s.addEventListener('change', handleTeamStatusChange));
+            document.querySelectorAll('.voted-checkbox:not([disabled])').forEach(cb => cb.addEventListener('change', handleVotedChange));
+        }
+        
+        function handlePhoneNumberChange(event) {
+            const contactId = event.target.dataset.id;
+            const newPhoneNumber = event.target.value.trim();
+            const contact = window.contacts.find(c => c.id == contactId);
+            const actingMemberId = event.target.dataset.memberId;
+            const actingMember = window.teamMembers.find(m => m.id === actingMemberId);
+
+            if (!contact || !actingMember) return;
+            
+            const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId !== actingMemberId;
+            
+            if (isControlledByAnother) {
+                event.target.value = contact.numeroTelephone || ''; 
+                console.warn("Attempt to change phone number rejected: Controlled by another member.");
+                return; 
+            }
+            
+            const contactToUpdate = {...contact};
+
+            if (newPhoneNumber.length > 0) {
+                contactToUpdate.numeroTelephone = newPhoneNumber;
+                contactToUpdate.controlledByMemberId = actingMemberId;
+                contactToUpdate.controlledByMemberName = actingMember.name;
+            } else {
+                // Releasing control
+                contactToUpdate.numeroTelephone = null;
+                contactToUpdate.controlledByMemberId = null;
+                contactToUpdate.controlledByMemberName = null;
+            }
+            saveContact(contactToUpdate); 
+        }
+
+        function handleTeamStatusChange(event) {
+            const contact = window.contacts.find(c => c.id == event.target.dataset.id);
+            if (contact) {
+                 const contactToUpdate = {...contact};
+                contactToUpdate.status = event.target.value;
+                if(contactToUpdate.status === 'A voté') {
+                    // Update checkbox if status is set to 'A voté'
+                    const checkbox = document.querySelector(`.voted-checkbox[data-id="${contact.id}"]`);
+                    if(checkbox) checkbox.checked = true;
+                }
+                saveContact(contactToUpdate); 
+            }
+        }
+
+        function handleVotedChange(event) {
+             const contact = window.contacts.find(c => c.id == event.target.dataset.id);
+             if (contact) {
+                const contactToUpdate = {...contact};
+                // Set status to 'A voté' if checked, otherwise default back to 'Acquis' (the strongest non-voted status)
+                contactToUpdate.status = event.target.checked ? 'A voté' : 'Acquis';
+                const select = document.querySelector(`.team-status-select[data-id="${contact.id}"]`);
+                if(select) select.value = contactToUpdate.status;
+                saveContact(contactToUpdate); 
+             }
+        }
+
+        // New Login/Logout button handlers
+        document.getElementById('splash-team-login-btn').addEventListener('click', handleTeamLogin);
+        document.getElementById('bootstrap-add-member-btn').addEventListener('click', handleBootstrapAddMember);
+        document.getElementById('team-logout-btn').addEventListener('click', handleTeamLogout);
+        
+        document.getElementById('add-team-member-btn').addEventListener('click', handleAddTeamMember);
+        document.getElementById('admin-team-member-select').addEventListener('change', (e) => window.renderAssignedContacts(e.target.value));
+
+        // --- CSV IMPORT ---
+        document.getElementById('csv-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => processCSV(e.target.result);
+                reader.readAsText(file, 'UTF-8');
+            }
+        });
+
+        async function processCSV(csvText) {
+            if (!db) {
+                console.error("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
+                return;
+            }
+            
+            const firstLine = csvText.split(/\r\n|\n/)[0];
+            const delimiter = firstLine.includes(';') ? ';' : ',';
+
+            const lines = csvText.split(/\r\n|\n/).slice(1);
+            const newContacts = lines.filter(line => line.trim() !== '').map((line) => {
+                const data = line.split(new RegExp(`[${delimiter}]`)).map(d => d.trim().replace(/"/g, ''));
+                 const contact = {
+                    status: 'À contacter', 
+                    nomNaissance: data[0] || '', 
+                    nomUsage: data[1] || '',
+                    prenoms: data[2] || '', 
+                    dateNaissance: data[3] || '', // Assuming format DD/MM/YYYY
+                    email: data[9] || '', 
+                    assignedTo: null,
+                    numeroTelephone: null, 
+                    controlledByMemberId: null,
+                    controlledByMemberName: null
+                };
+                if (!contact.nomUsage) contact.nomUsage = contact.nomNaissance;
+                return contact;
+            }).filter(c => c.nomUsage || c.prenoms);
+            
+            // Per platform requirements, avoiding window.confirm(). Proceeding directly with import.
+            console.warn(`[IMPORTING] ${newContacts.length} contacts. (Confirmation dialog skipped per platform rule.)`);
+            
+            let importedCount = 0;
+            for (const contact of newContacts) {
+                try {
+                    await addDoc(getPublicCollectionRef('contacts'), contact);
+                    importedCount++;
+                } catch (e) {
+                    console.error("Erreur lors de l'importation d'un contact:", e);
+                }
+            }
+            console.log(`${importedCount} contacts importés.`);
+            document.getElementById('csv-file-input').value = '';
+        }
+        
+        // --- PROJECTION LOGIC ---
+        document.getElementById('run-projection').addEventListener('click', runProjection);
+        async function runProjection() {
+             if (!window.isAdmin) return; // Projection is admin only
+
+            const totalInscrits = parseInt(document.getElementById('total-inscrits').value);
+            const turnout = parseFloat(document.getElementById('turnout').value);
+            const numLists = parseInt(document.getElementById('num-lists').value);
+            const objectiveSeats = parseInt(document.getElementById('objective-seats').value);
+            const SEATS_TO_FILL = 5; 
+
+            if (isNaN(totalInscrits) || isNaN(turnout) || isNaN(numLists) || numLists < 1 || isNaN(objectiveSeats)) return;
+
+            const statusCounts = window.contacts.reduce((acc, c) => ({...acc, [c.status]: (acc[c.status] || 0) + 1 }), {});
+            
+            const ourVotes = Math.round(
+                (statusCounts['A voté'] || 0) + (statusCounts['Acquis'] || 0) * 1 +
+                (statusCounts['Probable'] || 0) * 0.7 + (statusCounts['À convaincre'] || 0) * 0.2
+            );
+
+            const totalVotants = Math.round(totalInscrits * (turnout / 100));
+            const quotient = Math.floor(totalVotants / SEATS_TO_FILL);
+            
+            window.votesGoal = quotient > 0 ? quotient : 1000;
+            
+            const historyEntry = { 
+                timestamp: Date.now(), 
+                counts: statusCounts, 
+                goal: window.votesGoal,
+                ourVotes: ourVotes 
+            };
+            await addProjectionHistory(historyEntry);
+
+            let allLists = [{ name: "Votre Liste", votes: ourVotes, seats: 0 }];
+            const otherVotes = totalVotants > ourVotes ? totalVotants - ourVotes : 0;
+            
+            // Simulate rival lists (adjusting votes so total equals totalVotants)
+            if (numLists > 1) {
+                const numRivalLists = numLists - 1;
+                const baseVote = otherVotes / numRivalLists;
+                let simulatedTotal = 0;
+                
+                for (let i = 1; i < numLists; i++) {
+                    // Slight random variance for realism
+                    const variance = baseVote * (0.8 + Math.random() * 0.4); 
+                    const simulatedVotes = Math.round(variance);
+                    allLists.push({ name: `Liste Adverse ${i}`, votes: simulatedVotes, seats: 0 });
+                    simulatedTotal += simulatedVotes;
+                }
+                
+                const currentTotalRival = allLists.slice(1).reduce((sum, list) => sum + list.votes, 0);
+                const adjustmentNeeded = otherVotes - currentTotalRival;
+
+                if (numRivalLists > 0 && allLists[1]) {
+                    // Distribute remaining adjustment to the first rival list
+                    allLists[1].votes += adjustmentNeeded;
+                }
+
+                
+            }
+            
+            let seatsAttributed = 0, stepLog = '';
+            let currentAllLists = JSON.parse(JSON.stringify(allLists)); 
+            
+            // 1. Attribution au quotient
+            if (quotient > 0) {
+                currentAllLists.forEach(list => {
+                    const seatsWon = Math.floor(list.votes / quotient);
+                    list.seats += seatsWon;
+                    seatsAttributed += seatsWon;
+                    if(seatsWon > 0) stepLog += `<li><strong>Tour au quotient :</strong> ${list.name} obtient ${seatsWon} siège(s).</li>`;
+                });
+            }
+            
+            // 2. Attribution à la plus forte moyenne (D'Hondt) pour les sièges restants
+            while(seatsAttributed < SEATS_TO_FILL) {
+                let bestList = null;
+                let maxAvg = -1;
+
+                currentAllLists.forEach(list => {
+                    // D'Hondt formula: Votes / (Seats + 1)
+                    const currentAvg = list.votes / (list.seats + 1); 
+                    if (currentAvg > maxAvg) {
+                        maxAvg = currentAvg;
+                        bestList = list;
+                    }
+                });
+
+                if (bestList && maxAvg > 0) {
+                    bestList.seats++;
+                    seatsAttributed++;
+                    stepLog += `<li><strong>Tour forte moyenne :</strong> ${bestList.name} obtient 1 siège (Moyenne: ${Math.round(maxAvg).toLocaleString()}).</li>`;
+                } else break;
+            }
+            
+            const ourResult = currentAllLists.find(l => l.name === "Votre Liste");
+            const isObjectiveMet = ourResult.seats >= objectiveSeats;
+            const resultColor = isObjectiveMet ? 'text-green-600' : 'text-red-600';
+            
+            document.getElementById('projection-results').innerHTML = `
+                <h3 class="text-lg font-semibold text-gray-800">Synthèse de la Projection</h3>
+                <div class="grid grid-cols-2 gap-4 mb-6 text-center">
+                    <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Total Votants Estimé</p><p class="text-2xl font-bold">${totalVotants.toLocaleString()}</p></div>
+                    <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Quotient Électoral</p><p class="text-2xl font-bold">${quotient > 0 ? quotient.toLocaleString() : 'N/A'}</p></div>
+                </div>
+                
+                <p class="text-xl font-bold ${resultColor} mb-4 text-center">Objectif de ${objectiveSeats} siège(s) : ${isObjectiveMet ? 'ATTEINT' : 'NON ATTEINT'}</p>
+
+                <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Répartition finale des sièges (Méthode D'Hondt)</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Liste</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Votes Projetés</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sièges Obtenus</th></tr></thead>
+                        <tbody>${currentAllLists.sort((a,b) => b.votes - a.votes).map(l => 
+                            `<tr class="${l.name === 'Votre Liste' ? 'bg-blue-50 font-semibold' : ''}">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">${l.name}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${l.votes.toLocaleString()}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${l.seats}</td>
+                            </tr>`
+                        ).join('')}</tbody>
+                    </table>
+                </div>
+
+                <details class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <summary class="font-semibold text-gray-700 cursor-pointer">Détail de l'attribution des sièges</summary>
+                    <ol class="list-disc pl-5 mt-2 text-sm text-gray-600 space-y-1">${stepLog}</ol>
+                </details>
+            `;
+            
+            window.updateAll();
+        }
+
+        window.updateHistoryChart = function() {
+            const ctx = document.getElementById('history-chart').getContext('2d');
+            const history = window.projectionHistory;
+
+            if (history.length === 0) {
+                if (historyChartInstance) historyChartInstance.destroy();
+                document.getElementById('history-chart').style.display = 'none';
+                return;
+            }
+             document.getElementById('history-chart').style.display = 'block';
+
+            const data = {
+                labels: history.map((entry, index) => `Proj. ${index + 1} (${new Date(entry.timestamp).toLocaleDateString()})`),
+                datasets: [{
+                    label: 'Votes Projetés',
+                    data: history.map(entry => entry.ourVotes),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            };
+
+            if (historyChartInstance) {
+                historyChartInstance.data = data;
+                historyChartInstance.update();
+            } else {
+                historyChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'top' }, title: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        }
+        
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase(); 
+            // The splash screen will be managed by initializeFirebase after anonymous login.
+
+            // Navigation setup
+            const views = {
+                'dashboard': 'dashboard-view',
+                'contacts': 'contacts-view',
+                'team': 'team-view',
+                'projections': 'projections-view'
+            };
+
+            function showView(viewName) {
+                 const isAllowed = window.isAdmin || (viewName === 'team' || viewName === 'contacts');
+                
+                if (!isAllowed) {
+                    // Non-admin trying to access Dashboard or Projections
+                    viewName = 'team';
+                }
+
+                Object.values(views).forEach(id => document.getElementById(id).classList.add('hidden'));
+                document.getElementById(views[viewName]).classList.remove('hidden');
+
+                document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active', 'bg-blue-600'));
+                
+                const navElement = document.getElementById(`nav-${viewName}`);
+                if (navElement) {
+                     navElement.classList.add('active', 'bg-blue-600');
+                }
+                
+                if (viewName === 'team') window.renderTeamView();
+                if (viewName === 'projections') window.updateHistoryChart();
+            }
+
+            document.getElementById('nav-dashboard').addEventListener('click', (e) => { e.preventDefault(); showView('dashboard'); });
+            document.getElementById('nav-contacts').addEventListener('click', (e) => { e.preventDefault(); showView('contacts'); });
+            document.getElementById('nav-team').addEventListener('click', (e) => { e.preventDefault(); showView('team'); });
+            document.getElementById('nav-projections').addEventListener('click', (e) => { e.preventDefault(); showView('projections'); });
+
+        });
     </script>
 </body>
 </html>
