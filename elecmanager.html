@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campagne Électorale Consulaires 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .kpi-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+        }
+        .controlled-message {
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-weight: 500;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            background-color: #fef2f2;
+            border: 1px solid #f87171;
+            color: #b91c1c;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            white-space: nowrap;
+        }
+        /* Custom scrollbar for contact list */
+        .contact-list-container {
+            overflow-y: auto;
+        }
+        .contact-list-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .contact-list-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .contact-list-container::-webkit-scrollbar-thumb {
+            background: #a8a8a8;
+            border-radius: 4px;
+        }
+        .contact-list-container::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-800">Campagne Électorale Consulaires 2026</h1>
+                <div id="user-info" class="text-sm text-gray-500">
+                    <span class="font-medium text-gray-700">Utilisateur ID:</span> <span id="user-id">...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-gray-800 text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-center h-16">
+                    <div class="flex items-baseline space-x-4">
+                        <a href="#" id="nav-dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Tableau de Bord</a>
+                        <a href="#" id="nav-contacts" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Gestion des Contacts</a>
+                        <a href="#" id="nav-team" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Équipe</a>
+                        <a href="#" id="nav-projections" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Projections</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow">
+            <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                
+                <!-- Loading Indicator -->
+                <div id="loading-indicator" class="text-center p-8 text-lg font-medium text-blue-600">
+                    Chargement des données en cours...
+                </div>
+
+                <!-- Dashboard View -->
+                <div id="dashboard-view" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">Contacts Gérés</h3><p id="kpi-total-contacts" class="text-3xl font-bold text-gray-900">0</p></div>
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">Votes "Certains"</h3><p id="kpi-certain-votes" class="text-3xl font-bold text-blue-600">0</p></div>
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">A Voté (Jour J)</h3><p id="kpi-has-voted" class="text-3xl font-bold text-violet-600">0</p></div>
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">Votes Projetés (pondérés)</h3><p id="kpi-projected-votes" class="text-3xl font-bold text-green-600">0</p></div>
+                    </div>
+
+                    <div class="bg-white shadow rounded-lg p-6 mb-6">
+                        <h3 id="goal-title" class="text-lg font-medium text-gray-900 mb-2">Objectif de 1000 votes certains</h3>
+                        <div class="w-full bg-gray-200 rounded-full h-4">
+                            <div id="goal-progress-bar" class="bg-blue-600 h-4 rounded-full text-center text-white text-xs" style="width: 0%;"></div>
+                        </div>
+                        <p id="goal-progress-text" class="text-right text-sm text-gray-600 mt-1">0 / 1000</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Répartition des Contacts</h3>
+                            <canvas id="status-chart"></canvas>
+                        </div>
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Anniversaires à venir (30 jours)</h3>
+                            <div id="birthday-list" class="space-y-2 max-h-60 overflow-y-auto">
+                                <p class="text-gray-500">Aucun anniversaire dans les 30 prochains jours.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contacts View -->
+                <div id="contacts-view" class="hidden">
+                    <div class="bg-white shadow rounded-lg p-6">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                             <div>
+                                <h2 class="text-xl font-bold text-gray-800">Gestion Générale des Contacts</h2>
+                                <p class="text-sm text-gray-500">Importez, recherchez et assignez des contacts à votre équipe.</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label for="csv-file-input" class="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Importer un CSV
+                                    <input id="csv-file-input" type="file" accept=".csv" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" id="search-contacts" placeholder="Rechercher par nom, prénom, email..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="contact-list-container overflow-x-auto max-h-[60vh] relative">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénom(s)</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="contacts-table-body" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team View -->
+                <div id="team-view" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-1 bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Gestion de l'Équipe</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="new-team-member" class="block text-sm font-medium text-gray-700">Nom du membre</label>
+                                    <div class="mt-1 flex rounded-md shadow-sm">
+                                        <input type="text" id="new-team-member" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <button id="add-team-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100">
+                                            Ajouter
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="team-member-select" class="block text-sm font-medium text-gray-700">Voir la liste de</label>
+                                    <select id="team-member-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                        <option value="">-- Sélectionnez un responsable --</option>
+                                    </select>
+                                </div>
+                                <div id="team-list" class="space-y-2 pt-4">
+                                   <!-- List of team members with delete button -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-2 bg-white shadow rounded-lg p-6">
+                            <div id="team-member-contact-view">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Contacts du Responsable</h2>
+                                <p class="text-sm text-gray-500">Saisir le numéro de téléphone pour prendre le contrôle du contact.</p>
+                                <p id="team-contact-placeholder" class="text-gray-500">Sélectionnez un membre de l'équipe pour voir sa liste de contacts.</p>
+                                <div id="team-contact-list-container" class="hidden contact-list-container overflow-x-auto max-h-[60vh] relative">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom(s)</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Téléphone (Contrôle)</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut (Campagne)</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">A Voté (Jour J)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="team-contacts-table-body" class="bg-white divide-y divide-gray-200">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projections View -->
+                <div id="projections-view" class="hidden">
+                     <div class="space-y-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-1 bg-white shadow rounded-lg p-6">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Paramètres de la Simulation</h2>
+                                <div class="space-y-6">
+                                    <div>
+                                        <label for="total-inscrits" class="block text-sm font-medium text-gray-700">Nombre total d'inscrits (LEC)</label>
+                                        <input type="number" id="total-inscrits" value="18000" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="turnout" class="block text-sm font-medium text-gray-700">Taux de participation estimé (%)</label>
+                                        <input type="number" id="turnout" value="25" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="num-lists" class="block text-sm font-medium text-gray-700">Nombre de listes en compétition</label>
+                                        <input type="number" id="num-lists" value="4" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                     <div>
+                                        <label for="objective-seats" class="block text-sm font-medium text-gray-700">Nombre de sièges visés (Objectif)</label>
+                                        <input type="number" id="objective-seats" value="1" min="1" max="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <button id="run-projection" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Lancer la Projection</button>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2 bg-white shadow rounded-lg p-6">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Résultats de la Projection</h2>
+                                <div id="projection-results" class="space-y-4">
+                                   <p class="text-gray-500">Veuillez configurer les paramètres et lancer la projection pour voir les résultats.</p>
+                                </div>
+                                <div id="projection-summary-table" class="mt-6"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Évolution de la Campagne</h2>
+                            <canvas id="history-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Chart.js for the doughnut chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- FIREBASE IMPORTS -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        // Set Firebase Log Level to debug for development/testing
+        setLogLevel('Debug');
+
+        // --- GLOBAL FIREBASE/APP VARIABLES ---
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default until authenticated
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- GLOBAL STATE ---
+        window.contacts = [];
+        window.teamMembers = [];
+        window.projectionHistory = [];
+        window.votesGoal = 1000;
+        window.isAuthReady = false; // Flag to ensure listeners start only after auth
+
+        const STATUS_OPTIONS = {
+            'À contacter': 'À contacter', 'À convaincre': 'À convaincre', 'Probable': 'Probable',
+            'Acquis': 'Acquis', 'Refus': 'Refus', 'A voté': 'A voté'
+        };
+
+        const STATUS_COLORS = {
+            'À contacter': '#9ca3af', 'À convaincre': '#f59e0b', 'Probable': '#84cc16',
+            'Acquis': '#2563eb', 'Refus': '#ef4444', 'A voté': '#8b5cf6'
+        };
+        
+        const TEAM_STATUS_OPTIONS = {
+            'À contacter': 'À contacter', 'À convaincre': 'À convaincre', 'Probable': 'Probable',
+            'Acquis': 'Acquis', 'Refus': 'Refus'
+        };
+        
+        // --- FIREBASE INITIALIZATION & AUTH ---
+        async function initializeFirebase() {
+            if (!firebaseConfig) {
+                console.error("Firebase config not found. Running in demo mode (no persistence).");
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                let user;
+
+                // 1. Perform Authentication synchronously (awaiting the result)
+                if (initialAuthToken) {
+                    const userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                    user = userCredential.user;
+                } else {
+                    const userCredential = await signInAnonymously(auth);
+                    user = userCredential.user;
+                }
+
+                if (user) {
+                    userId = user.uid;
+                    document.getElementById('user-id').textContent = userId;
+                    window.isAuthReady = true; // Auth is now confirmed and ready
+
+                    // 2. Setup Listeners ONLY AFTER successful sign-in
+                    setupFirestoreListeners();
+                } else {
+                     document.getElementById('loading-indicator').textContent = "Erreur: Impossible d'authentifier l'utilisateur.";
+                     return;
+                }
+
+                // 3. Set up persistent observer (mainly for debugging/robustness, doesn't block init)
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid; 
+                    }
+                });
+
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('dashboard-view').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error initializing Firebase or signing in:", error);
+                document.getElementById('loading-indicator').textContent = "Erreur de connexion aux services de données: " + error.message;
+            }
+        }
+        
+        // --- FIRESTORE UTILS ---
+        // Public collection path for collaborative team data
+        function getPublicCollectionRef(collectionName) {
+            return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+        }
+        
+        // Private collection for user-specific data (e.g., projection history)
+        function getPrivateCollectionRef(collectionName) {
+            return collection(db, 'artifacts', appId, 'users', userId, collectionName);
+        }
+
+        // --- FIRESTORE LISTENERS (Replacing loadFromLocalStorage) ---
+        function setupFirestoreListeners() {
+            if (!db || !window.isAuthReady) return;
+
+            // 1. Listen for Team Members
+            onSnapshot(getPublicCollectionRef('teamMembers'), (snapshot) => {
+                window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Team members updated from Firestore:", window.teamMembers.length);
+                updateAll();
+            }, (error) => console.error("Error fetching team members:", error));
+            
+            // 2. Listen for Contacts
+            onSnapshot(getPublicCollectionRef('contacts'), (snapshot) => {
+                window.contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Contacts updated from Firestore:", window.contacts.length);
+                updateAll();
+            }, (error) => console.error("Error fetching contacts:", error));
+
+            // 3. Listen for Projection History (User-specific private data)
+            onSnapshot(getPrivateCollectionRef('projectionHistory'), (snapshot) => {
+                window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
+                console.log("Projection history loaded:", window.projectionHistory.length);
+                // Also load the last saved goal
+                const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
+                if (lastHistory && lastHistory.goal) {
+                    window.votesGoal = lastHistory.goal;
+                }
+                updateAll();
+            }, (error) => console.error("Error fetching history:", error));
+        }
+
+        // --- FIRESTORE ACTIONS (Replacing saveToLocalStorage) ---
+        async function saveContact(contact) {
+            if (!db) return;
+            const contactRef = doc(getPublicCollectionRef('contacts'), contact.id);
+            try {
+                await setDoc(contactRef, contact);
+                console.log("Contact saved:", contact.id);
+            } catch (e) {
+                console.error("Error saving document:", e);
+            }
+        }
+        
+        async function deleteContact(contactId) {
+            if (!db) return;
+            const contactRef = doc(getPublicCollectionRef('contacts'), contactId);
+            try {
+                await deleteDoc(contactRef);
+                console.log("Contact deleted:", contactId);
+            } catch (e) {
+                console.error("Error deleting document:", e);
+            }
+        }
+
+        async function saveTeamMember(member) {
+            if (!db) return;
+            const memberRef = doc(getPublicCollectionRef('teamMembers'), member.id);
+            try {
+                await setDoc(memberRef, member);
+            } catch (e) {
+                console.error("Error saving team member:", e);
+            }
+        }
+
+        async function addTeamMember(name) {
+             if (!db) return;
+             try {
+                 // Firestore automatically generates the ID (which we'll use as the member ID)
+                 const newDoc = await addDoc(getPublicCollectionRef('teamMembers'), { name: name });
+                 // The onSnapshot listener will update the state automatically
+                 return newDoc.id; 
+             } catch (e) {
+                 console.error("Error adding team member:", e);
+                 return null;
+             }
+        }
+
+        async function deleteTeamMember(memberId) {
+             if (!db) return;
+             const memberRef = doc(getPublicCollectionRef('teamMembers'), memberId);
+             try {
+                 await deleteDoc(memberRef);
+             } catch (e) {
+                 console.error("Error deleting team member:", e);
+             }
+        }
+        
+        async function addProjectionHistory(data) {
+             if (!db) return;
+             try {
+                 await addDoc(getPrivateCollectionRef('projectionHistory'), data);
+             } catch (e) {
+                 console.error("Error adding history:", e);
+             }
+        }
+
+        // --- MAIN APP LOGIC (Attached to window for global access) ---
+        window.updateAll = function() {
+            window.renderContacts();
+            window.updateDashboard();
+            if (!document.getElementById('team-view').classList.contains('hidden')) {
+                window.renderTeamView();
+            }
+        }
+        
+        window.updateDashboard = function() {
+            const totalContacts = window.contacts.length;
+            const statusCounts = window.contacts.reduce((acc, contact) => {
+                acc[contact.status] = (acc[contact.status] || 0) + 1;
+                return acc;
+            }, {});
+
+            const certainVotes = statusCounts['Acquis'] || 0;
+            const hasVoted = statusCounts['A voté'] || 0;
+
+            const projectedVotes = Math.round(
+                certainVotes +
+                (statusCounts['Probable'] || 0) * 0.7 +
+                (statusCounts['À convaincre'] || 0) * 0.2
+            );
+
+            document.getElementById('kpi-total-contacts').textContent = totalContacts;
+            document.getElementById('kpi-certain-votes').textContent = certainVotes;
+            document.getElementById('kpi-has-voted').textContent = hasVoted;
+            document.getElementById('kpi-projected-votes').textContent = projectedVotes + hasVoted;
+
+            const goal = window.votesGoal;
+            const currentCertain = certainVotes + hasVoted;
+            const progress = Math.min((currentCertain / goal) * 100, 100);
+            const progressBar = document.getElementById('goal-progress-bar');
+            
+            document.getElementById('goal-title').textContent = `Objectif de ${goal.toLocaleString()} votes certains`;
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = progress > 10 ? `${Math.round(progress)}%` : '';
+            document.getElementById('goal-progress-text').textContent = `${currentCertain.toLocaleString()} / ${goal.toLocaleString()}`;
+
+            window.updateStatusChart(statusCounts);
+            window.updateBirthdayAlerts();
+        }
+
+        window.updateStatusChart = function(statusCounts) {
+            let statusChart = window.statusChart; // Access global chart instance
+            const ctx = document.getElementById('status-chart').getContext('2d');
+            const labels = Object.keys(STATUS_OPTIONS);
+            const data = labels.map(label => statusCounts[label] || 0);
+            const backgroundColors = labels.map(label => STATUS_COLORS[label]);
+
+            if (statusChart) {
+                statusChart.data.labels = labels;
+                statusChart.data.datasets[0].data = data;
+                statusChart.data.datasets[0].backgroundColor = backgroundColors;
+                statusChart.update();
+            } else {
+                window.statusChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels, datasets: [{ data, backgroundColor: backgroundColors, borderWidth: 1 }] },
+                    options: { responsive: true, plugins: { legend: { position: 'top' }, title: { display: false } } }
+                });
+            }
+        }
+        
+        window.updateBirthdayAlerts = function() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const thirtyDaysFromNow = new Date(today);
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+            const upcomingBirthdays = window.contacts.filter(c => {
+                if (!c.dateNaissance) return false;
+                try {
+                    const parts = c.dateNaissance.split('/');
+                    if (parts.length !== 3) return false;
+                    const [day, month, year] = parts.map(p => parseInt(p, 10));
+                    if(isNaN(day) || isNaN(month) || isNaN(year)) return false;
+
+                    let birthDate = new Date(today.getFullYear(), month - 1, day);
+                    if(birthDate < today) {
+                       birthDate.setFullYear(today.getFullYear() + 1);
+                    }
+                    return birthDate >= today && birthDate <= thirtyDaysFromNow;
+                } catch(e) { return false; }
+            }).sort((a,b) => {
+                const [dayA, monthA] = a.dateNaissance.split('/');
+                const [dayB, monthB] = b.dateNaissance.split('/');
+                let dateA = new Date(today.getFullYear(), parseInt(monthA)-1, parseInt(dayA));
+                let dateB = new Date(today.getFullYear(), parseInt(monthB)-1, parseInt(dayB));
+                if(dateA < today) dateA.setFullYear(today.getFullYear() + 1);
+                if(dateB < today) dateB.setFullYear(today.getFullYear() + 1);
+                return dateA - dateB;
+            });
+            
+            const birthdayListEl = document.getElementById('birthday-list');
+            birthdayListEl.innerHTML = upcomingBirthdays.length > 0
+                ? upcomingBirthdays.map(c => {
+                    const [day, month, year] = c.dateNaissance.split('/');
+                    const age = today.getFullYear() - parseInt(year, 10);
+                    return `<div class="flex justify-between items-center text-sm">
+                                <p class="font-medium text-gray-800">${c.prenoms} ${c.nomUsage}</p>
+                                <p class="text-gray-500">${day}/${month} (aura ${age + 1} ans)</p>
+                            </div>`;
+                  }).join('')
+                : '<p class="text-gray-500">Aucun anniversaire dans les 30 prochains jours.</p>';
+        }
+
+        // --- CONTACTS MANAGEMENT (renderContacts, handleAssignContact, handleDeleteContact, search) ---
+        window.renderContacts = function(filteredContacts = null) {
+            const tableBody = document.getElementById('contacts-table-body');
+            tableBody.innerHTML = '';
+            const contactsToRender = filteredContacts || window.contacts;
+            const teamMembersMap = window.teamMembers.reduce((acc, m) => ({...acc, [m.id]: m.name}), {});
+
+            contactsToRender.forEach(contact => {
+                const row = document.createElement('tr');
+                const teamMemberOptions = window.teamMembers.map(tm => `<option value="${tm.id}" ${contact.assignedTo == tm.id ? 'selected' : ''}>${tm.name}</option>`).join('');
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.prenoms}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.email || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${contact.numeroTelephone || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="color: ${STATUS_COLORS[contact.status]}; background-color: ${STATUS_COLORS[contact.status]}20;">${contact.status}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
+                         <select data-id="${contact.id}" class="assign-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-xs">
+                            <option value="">Non assigné</option>
+                            ${teamMemberOptions}
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button data-id="${contact.id}" class="delete-btn text-red-600 hover:text-red-900">Supprimer</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            document.querySelectorAll('.assign-select').forEach(select => select.addEventListener('change', handleAssignContact));
+            document.querySelectorAll('.delete-btn').forEach(button => button.addEventListener('click', handleDeleteContact));
+        }
+        
+        function handleAssignContact(event) {
+            const contactId = event.target.dataset.id;
+            const newMemberId = event.target.value; // ID is now a string from Firestore
+            const contact = window.contacts.find(c => c.id == contactId);
+
+            if (contact) {
+                contact.assignedTo = newMemberId || null;
+                saveContact(contact);
+            }
+        }
+
+        function handleDeleteContact(event) {
+            const contactId = event.target.dataset.id;
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
+                deleteContact(contactId); // Delete from Firestore
+            }
+        }
+
+        document.getElementById('search-contacts').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = window.contacts.filter(c => 
+                (c.nomUsage && c.nomUsage.toLowerCase().includes(searchTerm)) ||
+                (c.prenoms && c.prenoms.toLowerCase().includes(searchTerm)) ||
+                (c.email && c.email.toLowerCase().includes(searchTerm)) ||
+                (c.numeroTelephone && c.numeroTelephone.toLowerCase().includes(searchTerm))
+            );
+            window.renderContacts(searchTerm.length > 2 ? filtered : null);
+        });
+        
+        // --- TEAM MANAGEMENT ---
+        window.renderTeamView = function() {
+            const teamSelect = document.getElementById('team-member-select');
+            const teamListDiv = document.getElementById('team-list');
+            
+            const selectedMemberId = teamSelect.value;
+            
+            teamSelect.innerHTML = '<option value="">-- Sélectionnez un responsable --</option>';
+            teamListDiv.innerHTML = '';
+
+            window.teamMembers.forEach(member => {
+                teamSelect.innerHTML += `<option value="${member.id}" ${selectedMemberId === member.id ? 'selected' : ''}>${member.name}</option>`;
+                teamListDiv.innerHTML += `<div class="flex justify-between items-center text-sm p-2 bg-gray-50 rounded"><span>${member.name}</span><button data-id="${member.id}" class="delete-member-btn text-red-500 hover:text-red-700 font-bold">X</button></div>`;
+            });
+            
+            document.querySelectorAll('.delete-member-btn').forEach(btn => btn.addEventListener('click', handleDeleteTeamMember));
+            window.renderAssignedContacts(selectedMemberId);
+        }
+
+        function handleAddTeamMember() {
+            const input = document.getElementById('new-team-member');
+            if (input.value.trim()) {
+                addTeamMember(input.value.trim()); // Add to Firestore
+                input.value = '';
+            }
+        }
+
+        function handleDeleteTeamMember(event) {
+            const memberId = event.target.dataset.id;
+            
+            if(confirm('Supprimer ce membre ? Les contacts assignés deviendront "Non assigné" et leur contrôle sera relâché.')) {
+                // Remove all assigned/controlled statuses from contacts before deleting member
+                window.contacts.filter(c => c.assignedTo === memberId || c.controlledByMemberId === memberId).forEach(c => {
+                    if(c.assignedTo === memberId) c.assignedTo = null; 
+                    if(c.controlledByMemberId === memberId) {
+                        c.controlledByMemberId = null;
+                        c.controlledByMemberName = null;
+                        c.numeroTelephone = ''; 
+                    }
+                    saveContact(c); // Update contact in Firestore
+                });
+                
+                deleteTeamMember(memberId); // Delete member from Firestore
+            }
+        }
+
+        window.renderAssignedContacts = function(memberId) {
+            const container = document.getElementById('team-contact-list-container');
+            const placeholder = document.getElementById('team-contact-placeholder');
+            const tableBody = document.getElementById('team-contacts-table-body');
+            
+            placeholder.classList.toggle('hidden', !!memberId);
+            container.classList.toggle('hidden', !memberId);
+            if (!memberId) return;
+
+            tableBody.innerHTML = '';
+            const assigned = window.contacts.filter(c => c.assignedTo == memberId);
+            
+            assigned.forEach(contact => {
+                const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId != memberId;
+                const phoneInputDisabled = isControlledByAnother ? 'disabled' : '';
+
+                const row = document.createElement('tr');
+                const statusOptionsHtml = Object.keys(TEAM_STATUS_OPTIONS).map(key => `<option value="${key}" ${contact.status === key ? 'selected' : ''}>${TEAM_STATUS_OPTIONS[key]}</option>`).join('');
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${contact.nomUsage}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${contact.prenoms}</td>
+                    
+                    <!-- NEW PHONE NUMBER INPUT (Control mechanism) -->
+                    <td class="px-6 py-4 text-sm text-gray-500 relative min-w-[150px]">
+                        <input type="tel" data-id="${contact.id}" data-member-id="${memberId}" class="phone-input w-full rounded-md border-gray-300 shadow-sm text-xs px-2 py-1 focus:ring-blue-500 focus:border-blue-500" value="${contact.numeroTelephone || ''}" placeholder="Numéro (Contrôle)" ${phoneInputDisabled}>
+                        ${isControlledByAnother ? `<span class="controlled-message">Géré par ${contact.controlledByMemberName}.</span>` : ''}
+                    </td>
+
+                    <!-- Status Select -->
+                    <td class="px-6 py-4 text-sm text-gray-500"><select data-id="${contact.id}" class="team-status-select w-full rounded-md border-gray-300 shadow-sm text-xs" ${contact.status === 'A voté' ? 'disabled' : ''}>${statusOptionsHtml}</select></td>
+                    
+                    <!-- Voted Checkbox -->
+                    <td class="px-6 py-4 text-center"><input type="checkbox" data-id="${contact.id}" class="voted-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded" ${contact.status === 'A voté' ? 'checked' : ''}></td>`;
+                tableBody.appendChild(row);
+            });
+            
+            document.querySelectorAll('.phone-input').forEach(input => input.addEventListener('change', handlePhoneNumberChange));
+            document.querySelectorAll('.team-status-select').forEach(s => s.addEventListener('change', handleTeamStatusChange));
+            document.querySelectorAll('.voted-checkbox').forEach(cb => cb.addEventListener('change', handleVotedChange));
+        }
+        
+        function handlePhoneNumberChange(event) {
+            const contactId = event.target.dataset.id;
+            const newPhoneNumber = event.target.value.trim();
+            const contact = window.contacts.find(c => c.id == contactId);
+            const actingMemberId = event.target.dataset.memberId;
+            const actingMember = window.teamMembers.find(m => m.id === actingMemberId);
+
+            if (!contact || !actingMember) return;
+
+            const isControlledByAnother = contact.controlledByMemberId && contact.controlledByMemberId !== actingMemberId;
+            
+            // 1. Check for conflict if trying to modify/add a number
+            if (isControlledByAnother) {
+                // Show message and revert the input value (Firestore sync will also revert if the user tried to force it)
+                event.target.value = contact.numeroTelephone || ''; 
+                
+                // Temporary visual feedback
+                const messageSpan = document.createElement('span');
+                messageSpan.className = 'controlled-message';
+                messageSpan.textContent = `Ce contact est géré par ${contact.controlledByMemberName}.`;
+                event.target.parentElement.appendChild(messageSpan);
+                
+                setTimeout(() => { messageSpan.remove(); }, 4000);
+                return; 
+            }
+            
+            // 2. Take/Maintain Control and update phone number
+            if (newPhoneNumber.length > 0) {
+                contact.numeroTelephone = newPhoneNumber;
+                contact.controlledByMemberId = actingMemberId;
+                contact.controlledByMemberName = actingMember.name;
+            } else {
+                // Phone number is being cleared -> release control
+                contact.numeroTelephone = '';
+                contact.controlledByMemberId = null;
+                contact.controlledByMemberName = null;
+            }
+            saveContact(contact); // Save to Firestore
+            // onSnapshot will handle the updateAll call
+        }
+
+        function handleTeamStatusChange(event) {
+            const contact = window.contacts.find(c => c.id == event.target.dataset.id);
+            if (contact) {
+                contact.status = event.target.value;
+                saveContact(contact); // Save to Firestore
+            }
+        }
+
+        function handleVotedChange(event) {
+             const contact = window.contacts.find(c => c.id == event.target.dataset.id);
+             if (contact) {
+                contact.status = event.target.checked ? 'A voté' : 'Acquis';
+                saveContact(contact); // Save to Firestore
+             }
+        }
+        document.getElementById('add-team-member-btn').addEventListener('click', handleAddTeamMember);
+        document.getElementById('team-member-select').addEventListener('change', (e) => window.renderAssignedContacts(e.target.value));
+
+        // --- CSV IMPORT ---
+        document.getElementById('csv-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => processCSV(e.target.result);
+                reader.readAsText(file, 'UTF-8');
+            }
+        });
+
+        async function processCSV(csvText) {
+            if (!db) {
+                alert("Erreur: La base de données n'est pas connectée. Veuillez réessayer.");
+                return;
+            }
+            
+            const lines = csvText.split(/\r\n|\n/).slice(1);
+            const newContacts = lines.filter(line => line.trim() !== '').map((line) => {
+                const data = line.split(/[;,]/).map(d => d.trim().replace(/"/g, ''));
+                 const contact = {
+                    status: 'À contacter', 
+                    nomNaissance: data[0] || '', 
+                    nomUsage: data[1] || '',
+                    prenoms: data[2] || '', 
+                    dateNaissance: data[3] || '', 
+                    email: data[9] || '', 
+                    assignedTo: null,
+                    numeroTelephone: '', 
+                    controlledByMemberId: null,
+                    controlledByMemberName: null
+                };
+                if (!contact.nomUsage) contact.nomUsage = contact.nomNaissance;
+                return contact;
+            }).filter(c => c.nomUsage || c.prenoms);
+            
+            if (confirm(`Importer ${newContacts.length} nouveaux contacts ?`)) {
+                let importedCount = 0;
+                for (const contact of newContacts) {
+                    try {
+                        // Use addDoc to create a new document with an auto-generated ID
+                        await addDoc(getPublicCollectionRef('contacts'), contact);
+                        importedCount++;
+                    } catch (e) {
+                        console.error("Erreur lors de l'importation d'un contact:", e);
+                    }
+                }
+                alert(`${importedCount} contacts importés.`);
+                document.getElementById('csv-file-input').value = '';
+                // The onSnapshot listener will call updateAll()
+            }
+        }
+        
+        // --- PROJECTION LOGIC ---
+        document.getElementById('run-projection').addEventListener('click', runProjection);
+        async function runProjection() {
+            const totalInscrits = parseInt(document.getElementById('total-inscrits').value);
+            const turnout = parseFloat(document.getElementById('turnout').value);
+            const numLists = parseInt(document.getElementById('num-lists').value);
+            const objectiveSeats = parseInt(document.getElementById('objective-seats').value);
+            const SEATS_TO_FILL = 5;
+
+            if (isNaN(totalInscrits) || isNaN(turnout) || isNaN(numLists) || numLists < 1 || isNaN(objectiveSeats)) return;
+
+            const statusCounts = window.contacts.reduce((acc, c) => ({...acc, [c.status]: (acc[c.status] || 0) + 1 }), {});
+            
+            const ourVotes = Math.round(
+                (statusCounts['A voté'] || 0) + (statusCounts['Acquis'] || 0) * 1 +
+                (statusCounts['Probable'] || 0) * 0.7 + (statusCounts['À convaincre'] || 0) * 0.2
+            );
+
+            const totalVotants = Math.round(totalInscrits * (turnout / 100));
+            const quotient = Math.floor(totalVotants / SEATS_TO_FILL);
+            
+            // Update votesGoal based on the projection
+            window.votesGoal = quotient > 0 ? quotient : 1000;
+            
+            // Record history (saved to user's private collection)
+            const historyEntry = { timestamp: Date.now(), counts: statusCounts, goal: window.votesGoal };
+            await addProjectionHistory(historyEntry);
+            // onSnapshot will handle the updateAll call
+
+            let allLists = [{ name: "Votre Liste", votes: ourVotes, seats: 0 }];
+            const otherVotes = totalVotants > ourVotes ? totalVotants - ourVotes : 0;
+            if (numLists > 1) {
+                const avgOtherVotes = otherVotes / (numLists - 1);
+                for (let i = 1; i < numLists; i++) {
+                    allLists.push({ name: `Liste Adverse ${i}`, votes: Math.round(avgOtherVotes * (0.8 + Math.random() * 0.4)), seats: 0 });
+                }
+                const totalSimulated = allLists.reduce((sum, list) => sum + list.votes, 0);
+                if(totalSimulated > 0 && totalSimulated !== totalVotants) {
+                    const factor = totalVotants / totalSimulated;
+                    allLists.forEach(list => list.votes = Math.round(list.votes * factor));
+                }
+            }
+            
+            let seatsAttributed = 0, stepLog = '';
+            
+            // 1. Attribution au quotient
+            if (quotient > 0) {
+                allLists.forEach(list => {
+                    const seatsWon = Math.floor(list.votes / quotient);
+                    list.seats += seatsWon;
+                    seatsAttributed += seatsWon;
+                    if(seatsWon > 0) stepLog += `<li><strong>Tour au quotient :</strong> ${list.name} obtient ${seatsWon} siège(s).</li>`;
+                });
+            }
+            
+            // 2. Attribution à la plus forte moyenne (D'Hondt) pour les sièges restants
+            while(seatsAttributed < SEATS_TO_FILL) {
+                const bestList = allLists.reduce((best, current) => {
+                    const currentAvg = current.votes / (current.seats + 1);
+                    return currentAvg > (best ? best.avg : -1) ? { list: current, avg: currentAvg } : best;
+                }, null);
+                if (bestList && bestList.avg > 0) {
+                    bestList.list.seats++;
+                    seatsAttributed++;
+                    stepLog += `<li><strong>Tour plus forte moyenne :</strong> ${bestList.list.name} obtient 1 siège (moyenne: ${Math.round(bestList.avg).toLocaleString()}).</li>`;
+                } else break;
+            }
+            
+            const ourResult = allLists.find(l => l.name === "Votre Liste");
+            const isObjectiveMet = ourResult.seats >= objectiveSeats;
+            
+            document.getElementById('projection-results').innerHTML = `
+                <h3 class="text-lg font-semibold text-gray-800">Synthèse</h3>
+                <div class="grid grid-cols-2 gap-4 mb-6 text-center">
+                    <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Total Votants</p><p class="text-2xl font-bold">${totalVotants.toLocaleString()}</p></div>
+                    <div class="p-4 bg-gray-100 rounded-lg"><p class="text-sm text-gray-600">Quotient Électoral</p><p class="text-2xl font-bold">${quotient > 0 ? quotient.toLocaleString() : 'N/A'}</p></div>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Répartition finale des sièges</h3>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Liste</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Votes</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sièges</th></tr></thead>
+                    <tbody>${allLists.sort((a, b) => b.votes - a.votes).map(list => `<tr class="${list.name === 'Votre Liste' ? 'bg-blue-100 font-bold' : ''}"><td class="px-4 py-2">${list.name}</td><td class="px-4 py-2">${list.votes.toLocaleString()}</td><td class="px-4 py-2">${list.seats}</td></tr>`).join('')}</tbody>
+                </table>
+                <div class="mt-6 p-4 border-l-4 ${isObjectiveMet ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}">
+                    <p class="font-bold ${isObjectiveMet ? 'text-green-800' : 'text-red-800'}">Objectif de ${objectiveSeats} siège(s) ${isObjectiveMet ? 'Atteint !' : 'non atteint.'}</p>
+                    <p class="${isObjectiveMet ? 'text-green-700' : 'text-red-700'}">Avec ces paramètres, votre liste obtiendrait ${ourResult.seats} siège(s).</p>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Détail de l'attribution</h3><ul class="list-disc pl-5 space-y-1 text-sm text-gray-600">${stepLog}</ul>`;
+
+            // Render Summary Table
+            let summaryTableHTML = `<h3 class="text-xl font-bold text-gray-800 my-4">Projection des Voix Minimum Estimées par Siège</h3>`;
+            if (quotient > 0) {
+                summaryTableHTML += `<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50"><tr>
+                        <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase">Projections (voix)</th>
+                        ${Array.from({length: 5}, (_, i) => `<th class="px-2 py-2 text-center font-medium text-gray-500 uppercase">Siège ${i + 1}</th>`).join('')}
+                    </tr></thead>
+                    <tbody class="bg-white divide-y divide-gray-200">`;
+
+                const rows = {
+                    'Estimation centrale': (est, tot) => est.toLocaleString(),
+                    'Fourchette min (x0.8)': (est, tot) => Math.round(est * 0.8).toLocaleString(),
+                    'Fourchette max (x1.2)': (est, tot) => Math.round(est * 1.2).toLocaleString(),
+                    'Part des voix (%)': (est, tot) => `${(est / tot * 100).toFixed(1)}%`,
+                };
+
+                for (const [label, formatFn] of Object.entries(rows)) {
+                    summaryTableHTML += `<tr><td class="px-2 py-2 font-medium text-gray-900">${label}</td>`;
+                    for (let i = 1; i <= 5; i++) {
+                        const estimation = i * quotient;
+                        const cellValue = formatFn(estimation, totalVotants);
+                        summaryTableHTML += `<td class="px-2 py-2 text-center">${cellValue}</td>`;
+                    }
+                    summaryTableHTML += `</tr>`;
+                }
+                summaryTableHTML += `<tr><td class="px-2 py-2 font-medium text-gray-900">Fourchette complète (min–max)</td>`;
+                 for (let i = 1; i <= 5; i++) {
+                     const estimation = i * quotient;
+                     const min = Math.round(estimation * 0.8 * 10) / 10;
+                     const max = Math.round(estimation * 1.2 * 10) / 10;
+                     summaryTableHTML += `<td class="px-2 py-2 text-center">${min.toLocaleString('fr-FR')} – ${max.toLocaleString('fr-FR')}</td>`;
+                 }
+                summaryTableHTML += `</tr>`;
+
+                summaryTableHTML += `</tbody></table></div>`;
+            } else {
+                summaryTableHTML += `<p class="text-gray-500">Le quotient électoral est trop bas pour générer une estimation par siège.</p>`;
+            }
+            document.getElementById('projection-summary-table').innerHTML = summaryTableHTML;
+        }
+
+        window.renderHistoryChart = function() {
+            const ctx = document.getElementById('history-chart').getContext('2d');
+            if (window.historyChart) { window.historyChart.destroy(); }
+            if(window.projectionHistory.length === 0) return;
+
+            const labels = window.projectionHistory.map(h => new Date(h.timestamp).toLocaleDateString('fr-FR'));
+            const datasets = Object.keys(STATUS_OPTIONS).map(status => ({
+                label: status,
+                data: window.projectionHistory.map(h => h.counts[status] || 0),
+                borderColor: STATUS_COLORS[status],
+                backgroundColor: STATUS_COLORS[status] + '20',
+                fill: false,
+                tension: 0.1
+            }));
+
+            datasets.push({
+                label: 'Objectif Votes Certains',
+                data: window.projectionHistory.map(h => h.goal),
+                borderColor: '#111827',
+                borderDash: [5, 5],
+                fill: false,
+            });
+            
+            window.historyChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+        
+        // --- INITIALIZATION ON WINDOW LOAD ---
+        window.addEventListener('load', () => {
+             // NAVIGATION SETUP
+            const navLinks = {
+                dashboard: document.getElementById('nav-dashboard'), contacts: document.getElementById('nav-contacts'),
+                team: document.getElementById('nav-team'), projections: document.getElementById('nav-projections')
+            };
+            const views = {
+                dashboard: document.getElementById('dashboard-view'), contacts: document.getElementById('contacts-view'),
+                team: document.getElementById('team-view'), projections: document.getElementById('projections-view')
+            };
+
+            function switchView(viewName) {
+                Object.values(views).forEach(v => v.classList.add('hidden'));
+                Object.values(navLinks).forEach(l => l.classList.remove('active'));
+                views[viewName].classList.remove('hidden');
+                navLinks[viewName].classList.add('active');
+                if(viewName === 'team') {
+                    window.renderTeamView();
+                }
+                if (viewName === 'projections') {
+                    window.renderHistoryChart();
+                }
+            }
+
+            navLinks.dashboard.addEventListener('click', (e) => { e.preventDefault(); switchView('dashboard'); });
+            navLinks.contacts.addEventListener('click', (e) => { e.preventDefault(); switchView('contacts'); });
+            navLinks.team.addEventListener('click', (e) => { e.preventDefault(); switchView('team'); });
+            navLinks.projections.addEventListener('click', (e) => { e.preventDefault(); switchView('projections'); });
+            
+            // START FIREBASE
+            initializeFirebase();
+            switchView('dashboard'); // Show dashboard initially with loading indicator
+        });
+    </script>
+</body>
+</html>
