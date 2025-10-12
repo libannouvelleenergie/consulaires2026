@@ -194,14 +194,14 @@
                     <div class="bg-white shadow rounded-lg p-6">
                         <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                              <div>
-                                <h2 class="text-xl font-bold text-gray-800">Gestion Générale des Contacts</h2>
-                                <p class="text-sm text-gray-500">Importez, recherchez et assignez des contacts à votre équipe.</p>
+                                <h2 class="text-xl font-bold text-gray-800">Gestion Générale des Contacts (Synchro Sheets)</h2>
+                                <p class="text-sm text-gray-500">Ces données proviennent de la base de données synchronisée.</p>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <label for="csv-file-input" class="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                    Importer un CSV
-                                    <input id="csv-file-input" type="file" accept=".csv" class="hidden">
-                                </label>
+                                <button id="sync-info-btn" class="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Info Synchro Sheets
+                                </button>
+                                <!-- Le bouton d'import CSV est retiré, car la source est Sheets -->
                             </div>
                         </div>
                         <div class="mb-4">
@@ -211,17 +211,21 @@
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50 sticky top-0">
                                     <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénom(s)</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigner</th> <!-- Nouvelle colonne d'action pour l'admin -->
+                                        <!-- Champs du Contact Étendu -->
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom (Usage)</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénoms</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Naiss.</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone/WhatsApp</th>
+                                        
+                                        <!-- Champs de Suivi Campagne -->
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigner</th> <!-- Colonne d'action pour l'admin -->
                                     </tr>
                                 </thead>
                                 <tbody id="contacts-table-body" class="bg-white divide-y divide-gray-200">
-                                    <tr><td colspan="7" class="text-center py-4 text-gray-500">Chargement des contacts...</td></tr>
+                                    <tr><td colspan="8" class="text-center py-4 text-gray-500">Chargement des contacts...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -239,7 +243,7 @@
                             <div class="border-b pb-4 mb-4">
                                 <h2 class="text-xl font-bold text-blue-600 mb-4">Statut de Connexion</h2>
                                 <p id="current-member-info" class="text-lg font-semibold text-gray-700"></p>
-                                <p id="is-admin-info" class="text-sm mt-1 text-green-600 font-medium hidden">ACCÈS ADMINISTRATEUR</p>
+                                <p id="is-admin-info" class="text-sm mt-1 text-red-600 font-medium hidden">ACCÈS ADMINISTRATEUR</p>
                             </div>
 
                             <!-- Admin: Add Team Member -->
@@ -907,11 +911,29 @@
             contactsBody.innerHTML = '';
             
             if (window.contacts.length === 0) {
-                 contactsBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray-500">Aucun contact trouvé. Importez un CSV pour commencer.</td></tr>`;
+                 contactsBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">Aucun contact trouvé. Les données seront synchronisées depuis Sheets.</td></tr>`;
                  return;
             }
+            
+            // Filtrage/Recherche (logique simple conservée pour la réactivité)
+            const searchText = ($('search-contacts').value || '').toLowerCase();
+            const filteredContacts = window.contacts.filter(contact => {
+                 if (searchText === '') return true;
+                 
+                 // Rechercher dans Nom, Prénoms, Email, Téléphone
+                 const name = (contact.nomUsage || contact.nomNaissance || '').toLowerCase();
+                 const firstName = (contact.prenoms || '').toLowerCase();
+                 const email = (contact.adresseElectronique || '').toLowerCase();
+                 const phone = (contact.telephone || '').toLowerCase();
+                 
+                 return name.includes(searchText) || 
+                        firstName.includes(searchText) || 
+                        email.includes(searchText) ||
+                        phone.includes(searchText);
+            });
 
-            window.contacts.forEach(contact => {
+
+            filteredContacts.forEach(contact => {
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
                 
@@ -922,17 +944,21 @@
 
 
                 row.innerHTML = `
-                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.lastName || 'N/A'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.firstName || 'N/A'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.email || 'N/A'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.phone || 'N/A'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm">
+                    <!-- Champs d'information étendus -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.prenoms || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.dateNaissance || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.adresseElectronique || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.telephone || 'N/A'}</td>
+
+                    <!-- Champs de suivi Campagne -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: ${STATUS_COLORS[contact.status] || '#e5e7eb'}; color: ${contact.status === 'À contacter' ? '#1f2937' : 'white'};">
                             ${contact.status || 'N/A'}
                         </span>
                     </td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.assignedTo || 'Non assigné'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm w-36">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.assignedTo || 'Non assigné'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm w-36">
                         ${assignCellContent}
                     </td>
                 `;
@@ -989,7 +1015,6 @@
             Object.keys(TEAM_STATUS_OPTIONS).forEach(status => {
                 const data = summaryData[status];
                 
-                // Si 'A voté' est un statut, nous ne l'incluons pas dans le total "non voté" car il est mutuellement exclusif
                 // Si la ligne est vide, on la masque pour plus de clarté
                 if (data.total === 0) return; 
 
@@ -1009,15 +1034,14 @@
 
                 totalAssigned += data.total;
                 totalVoted += data.voted;
-                totalNotVoted += data.notVoted;
+                // totalNotVoted est le total des non-votés par catégorie
+                // Le total général non voté est calculé séparément ci-dessous
             });
             
             // Mise à jour du pied de page
+            const trueTotalNotVoted = filteredContacts.filter(c => !c.hasVoted).length;
             $('summary-total-assigned').textContent = totalAssigned;
             $('summary-total-voted').textContent = totalVoted;
-            // La somme des non-votés est légèrement plus complexe ici car 'A voté' est un statut final.
-            // Nous allons calculer le total non voté de tous les contacts assignés qui n'ont PAS le statut 'A voté'
-            const trueTotalNotVoted = filteredContacts.filter(c => !c.hasVoted).length;
             $('summary-total-not-voted').textContent = trueTotalNotVoted;
         }
 
@@ -1029,7 +1053,7 @@
                 return;
             }
 
-            // 1. Affichage de la liste d'équipe (Admin) - Logique inchangée pour l'admin
+            // 1. Affichage de la liste d'équipe (Admin)
             if (window.isAdmin) {
                 const teamListEl = $('team-list');
                 teamListEl.innerHTML = '';
@@ -1077,7 +1101,7 @@
 
             const filteredContacts = window.contacts.filter(c => 
                 memberIdToFilter === 'all' || c.assignedToId === memberIdToFilter
-            );
+            ).sort((a, b) => (a.status || '').localeCompare(b.status || '')); // Trier par statut pour la clarté
 
             // 3. Mise à jour du tableau récapitulatif
             updateTeamSummary(filteredContacts);
@@ -1092,9 +1116,15 @@
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
                 row.innerHTML = `
-                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.lastName || 'N/A'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.firstName || 'N/A'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.phone || 'N/A'}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance || 'N/A'}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.prenoms || 'N/A'}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 relative">
+                        <!-- Affichage du numéro de téléphone avec un contrôle de confidentialité -->
+                        ${contact.telephone ? `
+                            <span class="contact-number">${contact.telephone.substring(0, 4)}...</span>
+                            <span class="controlled-message absolute bg-blue-50 text-blue-700 border-blue-200" style="bottom: 0px; left: 50%; transform: translateX(-50%); padding: 2px 4px; border-radius: 4px;">Pour contact</span>
+                        ` : 'N/A'}
+                    </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm w-48">
                         ${generateStatusSelect(contact.id, contact.status)}
                     </td>
@@ -1330,10 +1360,18 @@
                     window.contacts = snapshot.docs.map(doc => ({ 
                         id: doc.id, 
                         ...doc.data(), 
-                        hasVoted: doc.data().hasVoted || false, // S'assurer que hasVoted existe
-                        assignedTo: doc.data().assignedTo || null, // S'assurer que assignedTo existe
-                        assignedToId: doc.data().assignedToId || null, // S'assurer que assignedToId existe
-                        status: doc.data().status || 'À contacter' // S'assurer que le statut par défaut est défini
+                        hasVoted: doc.data().hasVoted || false, 
+                        assignedTo: doc.data().assignedTo || null, 
+                        assignedToId: doc.data().assignedToId || null, 
+                        status: doc.data().status || 'À contacter',
+                        // Nouveaux champs pour la synchro Sheets (s'assurer qu'ils existent pour éviter les erreurs d'affichage)
+                        nomNaissance: doc.data().nomNaissance || '',
+                        nomUsage: doc.data().nomUsage || '',
+                        prenoms: doc.data().prenoms || '',
+                        dateNaissance: doc.data().dateNaissance || '',
+                        adresseElectronique: doc.data().adresseElectronique || '',
+                        telephone: doc.data().telephone || '', // Champ unifié pour Téléphone/WhatsApp
+                        // Les autres champs (Lieu/Pays Naissance, Adresse, CP, Regex) sont stockés mais non affichés pour simplifier le tableau
                     }));
                     window.updateAll();
                 }, (error) => console.error("Error fetching contacts:", error));
@@ -1357,6 +1395,21 @@
                 }, (error) => console.error("Error fetching history:", error));
             }
         }
+        
+        function handleSyncInfoClick() {
+            showMessageBox('Informations sur la Synchronisation', 
+                `
+                <p class="mb-2">La **Gestion des Contacts** est configurée pour utiliser la **synchronisation bidirectionnelle** via une feuille Google Sheets.</p>
+                <h4 class="font-bold mt-3 mb-1">Comment cela fonctionne :</h4>
+                <ul class="list-disc list-inside text-sm space-y-1">
+                    <li>La feuille Sheets est la source de vérité pour les données d'identité (Nom, Prénom, Email, Téléphone...).</li>
+                    <li>Un script Google Apps Script (à configurer par l'Admin) surveille Sheets et met à jour Firestore.</li>
+                    <li>**Attention :** Les champs de suivi de campagne (Statut, A Voté, Assigné) sont gérés **UNIQUEMENT** par cette application (via Firestore) pour éviter les conflits de données.</li>
+                </ul>
+                <p class="mt-3 font-semibold text-blue-800 text-sm">Action Requise : Configurer le pont Apps Script vers votre base Firestore.</p>
+                `, 'info', true);
+        }
+
 
         // --- EVENT LISTENERS SETUP ---
         function setupEventListeners() {
@@ -1376,8 +1429,14 @@
             $('team-logout-btn').addEventListener('click', handleLogout);
             $('add-team-member-btn').addEventListener('click', handleAddTeamMember);
             
-            // Admin View Selector in Team View (pour changer la liste affichée dans la vue équipe)
+            // Sync Info Button
+            $('sync-info-btn').addEventListener('click', handleSyncInfoClick);
+            
+            // Admin View Selector in Team View
             $('admin-team-member-select').addEventListener('change', updateTeamView);
+            
+            // Search Input
+            $('search-contacts').addEventListener('input', updateContactsTable);
             
             // Set initial active view (Team view is the default landing after login)
             const defaultView = window.isAdmin ? 'dashboard' : 'contacts';
