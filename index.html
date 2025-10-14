@@ -371,7 +371,9 @@
                         </div>
                         <div class="bg-white shadow rounded-lg p-6">
                             <h2 class="text-xl font-bold text-gray-800 mb-4">Évolution de la Campagne</h2>
-                            <canvas id="history-chart"></canvas>
+                            <div style="height: 400px;">
+                                <canvas id="history-chart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -559,6 +561,8 @@
                 updateDashboardView();
             } else if (viewName === 'contacts') {
                 updateContactsTable(); // Rafraîchir la table des contacts
+            } else if (viewName === 'projections') {
+                updateHistoryChart(); // Charger le graphique d'historique lors de la navigation
             }
             // Ajoutez d'autres mises à jour de vue ici
         }
@@ -848,6 +852,124 @@
             }
         }
 
+        // --- PROJECTION LOGIC ---
+
+        // Fonction principale de projection
+        async function runProjection() {
+            if (!window.isAdmin) return showMessageBox('Accès Refusé', 'Cette fonction est réservée aux administrateurs.', 'error');
+
+            const totalInscrits = parseInt($('total-inscrits').value) || 0;
+            const turnoutPct = parseFloat($('turnout').value) || 0;
+            const numLists = parseInt($('num-lists').value) || 1;
+            const objectiveSeats = parseInt($('objective-seats').value) || 1;
+
+            const resultsDiv = $('projection-results');
+            const summaryDiv = $('projection-summary-table');
+            
+            // Données de la Campagne basées sur les contacts
+            const certainVotes = window.contacts.filter(c => c.status === 'Acquis').length;
+            const probableVotes = window.contacts.filter(c => c.status === 'Probable').length;
+            const contactedVotes = window.contacts.filter(c => ['Probable', 'Acquis'].includes(c.status)).length;
+
+            // Calculs de Projection
+            const totalVoters = Math.round(totalInscrits * (turnoutPct / 100));
+            // Projection actuelle (Acquis à 100% + Probable à 50%)
+            const projectedVotes = Math.round(certainVotes + (probableVotes * 0.5)); 
+
+            // Calcul de l'Objectif (estimation simplifiée: moyenne des voix nécessaires 
+            // pour battre les 'numLists - 1' autres listes pour 'objectiveSeats')
+            const totalSeats = 5; 
+            const thresholdVotes = Math.round(totalVoters * 0.05); // Seuil minimal de 5%
+            const votesForObjective = Math.round(totalVoters / (numLists) * objectiveSeats);
+            const targetVotes = Math.max(thresholdVotes, votesForObjective);
+
+            const votesDelta = targetVotes - projectedVotes;
+
+            // Sauvegarde de l'historique (pour le graphique d'évolution)
+            const historyData = {
+                timestamp: serverTimestamp(),
+                date: new Date().toLocaleDateString('fr-FR'), // Date formatée pour l'affichage
+                totalInscrits: totalInscrits,
+                turnout: turnoutPct,
+                totalVoters: totalVoters,
+                objectiveSeats: objectiveSeats,
+                targetVotes: targetVotes,
+                projectedVotes: projectedVotes,
+                certain: certainVotes,
+                probable: probableVotes,
+                goal: window.votesGoal 
+            };
+            
+            try {
+                const historyRef = getPrivateCollectionRef('projectionHistory');
+                await addDoc(historyRef, historyData);
+                showMessageBox('Projection Enregistrée', `La simulation (${new Date().toLocaleDateString('fr-FR')}) a été enregistrée dans l'historique de l'évolution.`, 'success');
+            } catch (error) {
+                 console.error("Erreur de sauvegarde de l'historique:", error);
+            }
+            
+            // Mise à jour de l'affichage des résultats
+            resultsDiv.innerHTML = `
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Analyse des Éléments</h3>
+                <ul class="space-y-2 text-sm text-gray-600 list-disc list-inside">
+                    <li><strong>Inscrits Totaux:</strong> ${totalInscrits.toLocaleString()}</li>
+                    <li><strong>Participation Estimée:</strong> ${turnoutPct}% (${totalVoters.toLocaleString()} votants)</li>
+                    <li><strong>Nombre de Listes:</strong> ${numLists}</li>
+                    <li><strong>Sièges Visés:</strong> ${objectiveSeats} / ${totalSeats}</li>
+                </ul>
+                
+                <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2 border-t pt-4">Résultats de la Simulation</h3>
+                <p class="text-md font-medium text-gray-800">Votre Projection Actuelle (Acquis + Probable * 0.5) : <span class="text-blue-600 text-xl font-bold">${projectedVotes.toLocaleString()} voix</span></p>
+                <p class="text-md font-medium text-gray-800">Objectif (pour ${objectiveSeats} siège(s)) : <span class="text-red-600 text-xl font-bold">${targetVotes.toLocaleString()} voix</span></p>
+            `;
+
+            // Tableau Récapitulatif
+            let deltaClass = votesDelta > 0 ? 'text-red-600' : 'text-green-600';
+            let deltaText = votesDelta > 0 ? 
+                `Il manque **${votesDelta.toLocaleString()} voix** pour atteindre l'objectif.` : 
+                `Vous dépassez l'objectif de **${Math.abs(votesDelta).toLocaleString()} voix** !`;
+            
+            summaryDiv.innerHTML = `
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">Tableau de Performance et Objectifs</h3>
+                <div class="p-4 rounded-lg border shadow-sm ${votesDelta > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}">
+                    <p class="text-center font-bold text-lg ${deltaClass}">${deltaText}</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200 mt-4 rounded-lg overflow-hidden border">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Catégorie</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Contacts</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Voix Pondérées</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td class="px-4 py-2 font-medium text-blue-600">Votes Acquis (100% Pondéré)</td>
+                            <td class="px-4 py-2 text-right">${certainVotes.toLocaleString()}</td>
+                            <td class="px-4 py-2 text-right">${certainVotes.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-medium text-orange-600">Votes Probables (50% Pondéré)</td>
+                            <td class="px-4 py-2 text-right">${probableVotes.toLocaleString()}</td>
+                            <td class="px-4 py-2 text-right">${Math.round(probableVotes * 0.5).toLocaleString()}</td>
+                        </tr>
+                        <tr class="bg-gray-50 font-bold">
+                            <td class="px-4 py-2 text-gray-900">Total Projection</td>
+                            <td class="px-4 py-2 text-right">${contactedVotes.toLocaleString()}</td>
+                            <td class="px-4 py-2 text-right text-blue-600">${projectedVotes.toLocaleString()}</td>
+                        </tr>
+                        <tr class="bg-gray-50 font-bold border-t border-gray-300">
+                            <td class="px-4 py-2 text-gray-900">Objectif à Atteindre</td>
+                            <td class="px-4 py-2 text-right">--</td>
+                            <td class="px-4 py-2 text-right text-red-600">${targetVotes.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            
+            updateHistoryChart(); // Mise à jour du graphique d'historique
+        }
+
 
         // --- DISPLAY LOGIC ---
 
@@ -1016,7 +1138,7 @@
 
             let totalAssigned = 0;
             let totalVoted = 0;
-            let totalNotVoted = 0;
+            // let totalNotVoted = 0; // Not strictly needed here as it's recalculated below
 
             // Affichage des lignes du tableau et calcul des totaux
             Object.keys(TEAM_STATUS_OPTIONS).forEach(status => {
@@ -1041,8 +1163,6 @@
 
                 totalAssigned += data.total;
                 totalVoted += data.voted;
-                // totalNotVoted est le total des non-votés par catégorie
-                // Le total général non voté est calculé séparément ci-dessous
             });
             
             // Mise à jour du pied de page
@@ -1217,6 +1337,88 @@
             }
         }
 
+        // Fonction pour mettre à jour le graphique d'historique de projection
+        function updateHistoryChart() {
+            if (!window.isAdmin) return;
+
+            const ctx = $('history-chart');
+            if (!ctx) return;
+
+            // Tri par timestamp (assuré par onSnapshot, mais on refait au cas où)
+            const historyDataSorted = [...window.projectionHistory].sort((a, b) => 
+                (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)
+            );
+
+            const labels = historyDataSorted.map(h => {
+                // Utiliser la date du jour de la simulation (h.date) pour l'axe X
+                return h.date || new Date(h.timestamp?.toDate()).toLocaleDateString('fr-FR');
+            });
+            const projectedVotesData = historyDataSorted.map(h => h.projectedVotes);
+            const targetVotesData = historyDataSorted.map(h => h.targetVotes);
+
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Votes Projetés Actuels (Pondérés)',
+                        data: projectedVotesData,
+                        borderColor: '#3b82f6', // blue-500
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Objectif de Votes Nécessaire',
+                        data: targetVotesData,
+                        borderColor: '#ef4444', // red-500
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 4,
+                        type: 'line' // S'assurer que les deux sont des lignes
+                    }
+                ]
+            };
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Nombre de Voix'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date de la Projection'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: {
+                            display: true,
+                            text: 'Évolution des Votes Projetés vs. Objectif'
+                        }
+                    }
+                }
+            };
+            
+            // Détruire l'instance existante si elle existe
+            if (historyChartInstance) {
+                historyChartInstance.destroy();
+            }
+            
+            // Créer la nouvelle instance
+            historyChartInstance = new Chart(ctx, config);
+        }
+
         function updateAll() {
             // Mise à jour de la vue de connexion/bootstrap
             updateLoginSelect();
@@ -1226,6 +1428,7 @@
                 updateContactsTable();
                 updateTeamView();
                 updateDashboardView();
+                updateHistoryChart(); // Mettre à jour le graphique d'historique (pour le cas où l'historique change)
             }
         }
         window.updateAll = updateAll; // Rendre la fonction accessible globalement pour les listeners
@@ -1406,7 +1609,9 @@
             const historyRef = getPrivateCollectionRef('projectionHistory');
             if (historyRef) {
                 onSnapshot(historyRef, (snapshot) => {
-                    window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
+                    window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => 
+                         (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)
+                    );
                     
                     const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
                     if (lastHistory && lastHistory.goal) {
@@ -1452,6 +1657,9 @@
             
             // Sync Info Button
             $('sync-info-btn').addEventListener('click', handleSyncInfoClick);
+
+            // PROJECTION BUTTON LISTENER (CORRECTION HERE)
+            $('run-projection').addEventListener('click', runProjection);
             
             // Admin View Selector in Team View
             $('admin-team-member-select').addEventListener('change', updateTeamView);
