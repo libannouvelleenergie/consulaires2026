@@ -204,6 +204,9 @@
                                 <!-- Le bouton d'import CSV est retiré, car la source est Sheets -->
                             </div>
                         </div>
+                        <div id="contacts-error-message" class="p-4 mb-4 bg-red-100 border border-red-400 text-red-700 rounded-md hidden">
+                            <!-- Message d'erreur de permission sera affiché ici -->
+                        </div>
                         <div class="mb-4">
                             <input type="text" id="search-contacts" placeholder="Rechercher par nom, prénom, email..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                         </div>
@@ -908,10 +911,14 @@
 
         function updateContactsTable() {
             const contactsBody = $('contacts-table-body');
+            $('contacts-error-message').classList.add('hidden'); // Masquer l'erreur si elle était affichée
             contactsBody.innerHTML = '';
             
             if (window.contacts.length === 0) {
-                 contactsBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">Aucun contact trouvé. Les données seront synchronisées depuis Sheets.</td></tr>`;
+                 contactsBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">
+                    Aucun contact trouvé. Les données seront synchronisées depuis Sheets.
+                    ${!window.isAdmin && window.teamMembers.length > 0 ? `<br>(Note: Si vous êtes admin, vérifiez la vue **Gestion des Contacts**)` : ''}
+                </td></tr>`;
                  return;
             }
             
@@ -1374,7 +1381,21 @@
                         // Les autres champs (Lieu/Pays Naissance, Adresse, CP, Regex) sont stockés mais non affichés pour simplifier le tableau
                     }));
                     window.updateAll();
-                }, (error) => console.error("Error fetching contacts:", error));
+                }, (error) => {
+                    console.error("Error fetching contacts:", error);
+                     // Afficher une erreur visible si la lecture des contacts échoue
+                    if (error.message.includes("permission")) {
+                        $('contacts-error-message').innerHTML = `
+                             **Erreur de Permission :** Impossible de lire la liste des contacts. 
+                             <br>Veuillez vous assurer que vos règles Firestore autorisent la lecture dans 
+                             <code>/artifacts/{appId}/public/data/contacts</code>.
+                        `;
+                        $('contacts-error-message').classList.remove('hidden');
+                    } else {
+                         $('contacts-error-message').innerHTML = `Erreur de chargement des contacts: ${error.message}`;
+                         $('contacts-error-message').classList.remove('hidden');
+                    }
+                });
             }
         }
 
