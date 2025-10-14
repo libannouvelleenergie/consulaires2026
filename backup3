@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗳️ Campagne Électorale Consulaires 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .kpi-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+        }
+        .controlled-message {
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-weight: 500;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            background-color: #fef2f2;
+            border: 1px solid #f87171;
+            color: #b91c1c;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            white-space: nowrap;
+        }
+        /* Custom scrollbar for contact list */
+        .contact-list-container {
+            overflow-y: auto;
+        }
+        .contact-list-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .contact-list-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .contact-list-container::-webkit-scrollbar-thumb {
+            background: #a8a8a8;
+            border-radius: 4px;
+        }
+        .contact-list-container::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        /* Splash Screen specific styles */
+        .splash-logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #1d4ed8; /* Blue-700 */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .splash-logo-sub {
+            font-size: 1.5rem;
+            color: #3b82f6; /* Blue-500 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Splash Screen / Team Login View -->
+    <div id="login-splash-view" class="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-100">
+        <div class="text-center mb-10">
+            <p class="splash-logo">Nouvelle Énergie</p>
+            <p class="splash-logo-sub">Campagne Consulaires 2026</p>
+        </div>
+        
+        <div id="splash-login-card" class="w-full max-w-md bg-white shadow-xl rounded-lg p-8 space-y-6">
+            <h2 class="text-2xl font-bold text-center text-gray-800">Connexion Équipe</h2>
+            
+            <!-- Bootstrap Panel (Visible by default in HTML, hidden by JS if members are found) -->
+            <div id="splash-bootstrap-panel" class="p-4 bg-gray-50 border-2 border-blue-200 border-dashed rounded-lg">
+                <h3 class="text-md font-bold text-gray-800 mb-2">Mode Démarrage (Base de données vide)</h3>
+                <p id="bootstrap-instructions" class="text-sm text-gray-600 mb-3">Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.</p>
+                <div>
+                    <label for="bootstrap-member-name" class="block text-sm font-medium text-gray-700">Nom du Premier Membre</label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <input type="text" id="bootstrap-member-name" placeholder="Ex: Damien" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <button id="bootstrap-add-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-blue-600 text-white text-sm hover:bg-blue-700">Créer & Se Connecter</button>
+                    </div>
+                    <p id="bootstrap-error-message" class="text-red-500 text-xs mt-1 hidden"></p>
+                </div>
+            </div>
+
+            <!-- Default Login Form (Hidden by default in HTML, revealed by JS if members are found) -->
+            <div id="splash-login-form" class="space-y-4 hidden">
+                <div>
+                    <label for="splash-login-member-select" class="block text-sm font-medium text-gray-700">Sélectionner votre nom</label>
+                    <select id="splash-login-member-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">-- Chargement des membres... --</option>
+                    </select>
+                </div>
+                <div class="relative">
+                    <label for="splash-auth-key-input" class="block text-sm font-medium text-gray-700">Clé de Connexion Secrète</label>
+                    <input type="password" id="splash-auth-key-input" placeholder="Entrez la clé..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <p id="splash-login-error-message" class="text-red-500 text-xs mt-1 hidden">Nom ou clé incorrect(e).</p>
+                </div>
+                <button id="splash-team-login-btn" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Se Connecter</button>
+            </div>
+
+            <!-- Placeholder for critical errors -->
+            <div id="critical-error-message" class="text-red-600 text-center text-sm hidden"></div>
+        </div>
+    </div>
+
+
+    <!-- Main Application Container (Hidden until logged in) -->
+    <div id="app-container" class="min-h-screen flex flex-col hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-800">Campagne Électorale Consulaires 2026</h1>
+                <div id="user-info" class="text-sm text-gray-500 flex items-center space-x-4">
+                    <span class="font-medium text-gray-700">Connecté:</span> <span id="user-id" class="break-all font-semibold text-gray-900">Non Connecté</span>
+                    <span id="team-member-status" class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 hidden"></span>
+                    <button id="team-logout-btn" class="inline-flex justify-center py-1 px-3 border border-transparent shadow-sm text-xs font-medium rounded-md text-white bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Déconnexion</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-gray-800 text-white" id="main-nav">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-center h-16">
+                    <div class="flex items-baseline space-x-4">
+                        <!-- Dashboard and Projections hidden for non-admins -->
+                        <a href="#" id="nav-dashboard" data-view="dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium hidden">Tableau de Bord</a>
+                        <a href="#" id="nav-contacts" data-view="contacts" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Gestion des Contacts</a>
+                        <a href="#" id="nav-team" data-view="team" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Équipe</a>
+                        <a href="#" id="nav-projections" data-view="projections" class="nav-link px-3 py-2 rounded-md text-sm font-medium hidden">Projections</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow">
+            <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                
+                <!-- Loading Indicator (Only shown briefly during Firebase auth) -->
+                <div id="loading-indicator" class="text-center p-8 text-lg font-medium text-blue-600 hidden">
+                    Connexion aux services de données...
+                </div>
+
+                <!-- Dashboard View -->
+                <div id="dashboard-view" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">Contacts Gérés</h3><p id="kpi-total-contacts" class="text-3xl font-bold text-gray-900">0</p></div>
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">Votes "Certains"</h3><p id="kpi-certain-votes" class="text-3xl font-bold text-blue-600">0</p></div>
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">A Voté (Jour J)</h3><p id="kpi-has-voted" class="text-3xl font-bold text-violet-600">0</p></div>
+                        <div class="kpi-card"><h3 class="text-gray-500 text-sm font-medium">Votes Projetés (pondérés)</h3><p id="kpi-projected-votes" class="text-3xl font-bold text-green-600">0</p></div>
+                    </div>
+
+                    <div class="bg-white shadow rounded-lg p-6 mb-6">
+                        <h3 id="goal-title" class="text-lg font-medium text-gray-900 mb-2">Objectif de 1000 votes certains</h3>
+                        <div class="w-full bg-gray-200 rounded-full h-4">
+                            <div id="goal-progress-bar" class="bg-blue-600 h-4 rounded-full text-center text-white text-xs" style="width: 0%;"></div>
+                        </div>
+                        <p id="goal-progress-text" class="text-right text-sm text-gray-600 mt-1">0 / 1000</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Répartition des Contacts</h3>
+                            <canvas id="status-chart"></canvas>
+                        </div>
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Anniversaires à venir (30 jours)</h3>
+                            <div id="birthday-list" class="space-y-2 max-h-60 overflow-y-auto">
+                                <p class="text-gray-500">Aucun anniversaire dans les 30 prochains jours.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contacts View (Admin) -->
+                <div id="contacts-view" class="hidden">
+                    <div class="bg-white shadow rounded-lg p-6">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                             <div>
+                                <h2 class="text-xl font-bold text-gray-800">Gestion Générale des Contacts (Synchro Sheets)</h2>
+                                <p class="text-sm text-gray-500">Ces données proviennent de la base de données synchronisée.</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button id="sync-info-btn" class="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Info Synchro Sheets
+                                </button>
+                                <!-- Le bouton d'import CSV est retiré, car la source est Sheets -->
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" id="search-contacts" placeholder="Rechercher par nom, prénom, email..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="contact-list-container overflow-x-auto max-h-[60vh] relative">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <!-- Champs du Contact Étendu -->
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom (Usage)</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénoms</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Naiss.</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone/WhatsApp</th>
+                                        
+                                        <!-- Champs de Suivi Campagne -->
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigner</th> <!-- Colonne d'action pour l'admin -->
+                                    </tr>
+                                </thead>
+                                <tbody id="contacts-table-body" class="bg-white divide-y divide-gray-200">
+                                    <tr><td colspan="8" class="text-center py-4 text-gray-500">Chargement des contacts...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team View (Member & Admin) -->
+                <div id="team-view" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Col 1: Team Management & Info -->
+                        <div class="lg:col-span-1 bg-white shadow rounded-lg p-6 space-y-6">
+                            
+                            <!-- Team Member Login (Simplified: connection is now via splash screen) -->
+                            <div class="border-b pb-4 mb-4">
+                                <h2 class="text-xl font-bold text-blue-600 mb-4">Statut de Connexion</h2>
+                                <p id="current-member-info" class="text-lg font-semibold text-gray-700"></p>
+                                <p id="is-admin-info" class="text-sm mt-1 text-red-600 font-medium hidden">ACCÈS ADMINISTRATEUR</p>
+                            </div>
+
+                            <!-- Admin: Add Team Member -->
+                            <div id="admin-member-creation-panel" class="hidden">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Ajouter un Membre (Admin)</h2>
+                                <p class="text-sm text-gray-500 mb-4">Une clé d'authentification unique sera générée. (Damien = Admin)</p>
+                                <div>
+                                    <label for="new-team-member" class="block text-sm font-medium text-gray-700">Nom du membre</label>
+                                    <div class="mt-1 flex rounded-md shadow-sm">
+                                        <input type="text" id="new-team-member" class="flex-1 block w-full min-w-0 rounded-none rounded-l-md sm:text-sm border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <button id="add-team-member-btn" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100">
+                                            Ajouter
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Admin: Team List & Keys -->
+                            <div id="admin-team-list-panel" class="hidden">
+                                <h3 class="text-lg font-medium text-gray-700 mt-6">Liste des Membres et Clés</h3>
+                                <div id="team-list" class="space-y-2 pt-2 text-xs">
+                                    <!-- List of team members with keys and delete button -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2/3: Contacts Assigned -->
+                        <div class="lg:col-span-2 bg-white shadow rounded-lg p-6">
+                            <div id="team-member-contact-view">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Mon Portefeuille de Contacts</h2>
+                                <p class="text-sm text-gray-500">Visualisation et mise à jour de votre portefeuille de contacts.</p>
+                                
+                                <!-- Admin Selector (Optional - for admin to view others' lists) -->
+                                <div id="admin-view-selector" class="mt-4 mb-4 p-3 bg-gray-50 rounded-lg border hidden">
+                                    <label for="admin-team-member-select" class="block text-xs font-medium text-gray-700">Vue Admin: Voir la liste de</label>
+                                    <select id="admin-team-member-select" class="mt-1 block w-full pl-3 pr-10 py-1 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                        <option value="current">-- Mes Contacts --</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Nouveau: Tableau Récapitulatif -->
+                                <div id="team-summary-table" class="mt-4 mb-6 hidden">
+                                    <h3 class="text-lg font-medium text-gray-700 mb-2">Récapitulatif de mon Portefeuille</h3>
+                                    <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">A Voté</th>
+                                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Non Voté</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="team-summary-body" class="bg-white divide-y divide-gray-200 text-sm">
+                                            <!-- Summary rows will be injected here -->
+                                        </tbody>
+                                        <tfoot class="bg-gray-50 font-bold">
+                                            <tr>
+                                                <td class="px-4 py-2 text-left text-sm text-gray-900">Total Assigné</td>
+                                                <td id="summary-total-assigned" class="px-4 py-2 text-right text-sm text-gray-900">0</td>
+                                                <td id="summary-total-voted" class="px-4 py-2 text-right text-sm text-gray-900">0</td>
+                                                <td id="summary-total-not-voted" class="px-4 py-2 text-right text-sm text-gray-900">0</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+
+                                <p id="team-contact-placeholder" class="text-gray-500 mt-6">Veuillez vous connecter pour voir votre liste de contacts.</p>
+                                <div id="team-contact-list-container" class="hidden contact-list-container overflow-x-auto max-h-[60vh] relative">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom(s)</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Téléphone (Contrôle)</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut (Campagne)</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">A Voté (Jour J)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="team-contacts-table-body" class="bg-white divide-y divide-gray-200">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projections View -->
+                <div id="projections-view" class="hidden">
+                     <div class="space-y-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-1 bg-white shadow rounded-lg p-6">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Paramètres de la Simulation</h2>
+                                <div class="space-y-6">
+                                    <div>
+                                        <label for="total-inscrits" class="block text-sm font-medium text-gray-700">Nombre total d'inscrits (LEC)</label>
+                                        <input type="number" id="total-inscrits" value="18000" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="turnout" class="block text-sm font-medium text-gray-700">Taux de participation estimé (%)</label>
+                                        <input type="number" id="turnout" value="25" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="num-lists" class="block text-sm font-medium text-gray-700">Nombre de listes en compétition</label>
+                                        <input type="number" id="num-lists" value="4" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="objective-seats" class="block text-sm font-medium text-gray-700">Nombre de sièges visés (Objectif)</label>
+                                        <input type="number" id="objective-seats" value="1" min="1" max="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <button id="run-projection" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Lancer la Projection</button>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2 bg-white shadow rounded-lg p-6">
+                                <h2 class="text-xl font-bold text-gray-800 mb-4">Résultats de la Projection</h2>
+                                <div id="projection-results" class="space-y-4">
+                                   <p class="text-gray-500">Veuillez configurer les paramètres et lancer la projection pour voir les résultats.</p>
+                                </div>
+                                <div id="projection-summary-table" class="mt-6"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Évolution de la Campagne</h2>
+                            <canvas id="history-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Chart.js for the doughnut chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- FIREBASE IMPORTS (truncated part completed for valid HTML structure) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        // Set Firebase Log Level to debug for development/testing
+        setLogLevel('Debug');
+
+        // --- GLOBAL FIREBASE/APP VARIABLES ---
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default until authenticated
+        
+        // *******************************************************************
+        // CONFIGURATION FIREBASE - LOGIQUE DE CHARGEMENT ROBUSTE
+        // *******************************************************************
+        
+        // Configuration de secours (fall-back) avec les valeurs fournies
+        const hardcodedFirebaseConfig = {
+            apiKey: "AIzaSyBy_3k0dPsPCN5b_iOfZl22eJoq8BWbaRo",
+            authDomain: "elecmanager-6f50a.firebaseapp.com",
+            projectId: "elecmanager-6f50a",
+            storageBucket: "elecmanager-6f50a.firebasestorage.app",
+            messagingSenderId: "872950170067",
+            appId: "1:872950170067:web:dc23cc105538d3e88baf26",
+            measurementId: "G-GXP88CTD96"
+        };
+        const hardcodedAppId = hardcodedFirebaseConfig.appId;
+
+        let configSource = hardcodedFirebaseConfig;
+        
+        // Tentative de récupération des variables de l'environnement Gemini
+        const appId = typeof __app_id !== 'undefined' ? __app_id : hardcodedAppId;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        if (typeof __firebase_config !== 'undefined' && __firebase_config.length > 0) {
+            try {
+                const parsedConfig = JSON.parse(__firebase_config);
+                if (parsedConfig && parsedConfig.projectId) {
+                    configSource = parsedConfig; // Utiliser la config injectée si disponible
+                }
+            } catch (e) {
+                console.warn("Firebase: Parsing de __firebase_config échoué. Utilisation de la configuration de repli.");
+            }
+        } 
+        
+        const firebaseConfig = configSource;
+
+        // --- GLOBAL STATE ---
+        window.contacts = [];
+        window.teamMembers = [];
+        window.projectionHistory = [];
+        window.votesGoal = 1000;
+        window.isAuthReady = false; // Flag to ensure listeners start only after auth
+        window.currentTeamMemberId = null; // State for logged-in team member
+        window.currentTeamMemberName = null;
+        window.isAdmin = false; // New state for role-based access control
+        let historyChartInstance = null; // Instance for the evolution chart
+        let statusChartInstance = null;
+
+        const STATUS_OPTIONS = {
+            'À contacter': 'À contacter', 'À convaincre': 'À convaincre', 'Probable': 'Probable',
+            'Acquis': 'Acquis', 'Refus': 'Refus', 'A voté': 'A voté'
+        };
+
+        const STATUS_COLORS = {
+            'À contacter': '#9ca3af', 'À convaincre': '#f59e0b', 'Probable': '#84cc16',
+            'Acquis': '#2563eb', 'Refus': '#ef4444', 'A voté': '#8b5cf6'
+        };
+        
+        // Les options de statut que les membres de l'équipe peuvent assigner (ils ne peuvent pas 'Assigner')
+        const TEAM_STATUS_OPTIONS = {
+            'À contacter': 'À contacter', 'À convaincre': 'À convaincre', 'Probable': 'Probable',
+            'Acquis': 'Acquis', 'Refus': 'Refus', 'A voté': 'A voté'
+        };
+        
+        // --- DOM Elements ---
+        const $ = id => document.getElementById(id);
+        const views = ['dashboard', 'contacts', 'team', 'projections'];
+
+
+        // --- FIRESTORE UTILS ---
+        // Public collection path for collaborative team data
+        function getPublicCollectionRef(collectionName) {
+            if (db) {
+                return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+            }
+            console.error("Firestore DB is not initialized.");
+            return null;
+        }
+        
+        // Private collection for user-specific data (e.g., projection history)
+        function getPrivateCollectionRef(collectionName) {
+            if (db) {
+                return collection(db, 'artifacts', appId, 'users', userId, collectionName);
+            }
+            console.error("Firestore DB is not initialized.");
+            return null;
+        }
+
+        // --- AUTH & MEMBER MANAGEMENT UTILS ---
+        function generateSecretKey(length = 8) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function setCurrentUser(member) {
+            window.currentTeamMemberId = member.id;
+            window.currentTeamMemberName = member.name;
+            window.isAdmin = member.isAdmin || false;
+            
+            // Masquer la vue de connexion et afficher la vue principale
+            $('login-splash-view').classList.add('hidden');
+            $('app-container').classList.remove('hidden');
+
+            // Mise à jour de l'affichage de l'utilisateur
+            $('user-id').textContent = member.name;
+            const statusEl = $('team-member-status');
+            statusEl.textContent = member.isAdmin ? 'Admin' : 'Membre';
+            statusEl.classList.remove('hidden', 'bg-yellow-100', 'text-yellow-800', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800');
+            statusEl.classList.add(member.isAdmin ? 'bg-red-100' : 'bg-blue-100', member.isAdmin ? 'text-red-800' : 'text-blue-800');
+            $('current-member-info').textContent = `Connecté en tant que: ${member.name}`;
+            
+            // Mise à jour de la visibilité des panels admin
+            $('is-admin-info').classList.toggle('hidden', !window.isAdmin);
+            $('admin-member-creation-panel').classList.toggle('hidden', !window.isAdmin);
+            $('admin-team-list-panel').classList.toggle('hidden', !window.isAdmin);
+            $('admin-view-selector').classList.toggle('hidden', !window.isAdmin);
+            
+            // Mise à jour de la navigation pour les vues admin
+            $('nav-dashboard').classList.toggle('hidden', !window.isAdmin);
+            $('nav-projections').classList.toggle('hidden', !window.isAdmin);
+
+            setupPrivateDataListeners(); // Démarrer l'écoute des données privées de ce membre
+            switchView(window.isAdmin ? 'dashboard' : 'team'); // Afficher la vue appropriée après connexion
+        }
+
+        function handleLogout() {
+            window.currentTeamMemberId = null;
+            window.currentTeamMemberName = null;
+            window.isAdmin = false;
+            $('app-container').classList.add('hidden');
+            $('login-splash-view').classList.remove('hidden');
+            window.updateLoginSelect(); // Réinitialiser le sélecteur de connexion
+            showMessageBox('Déconnexion', 'Vous êtes déconnecté de l\'équipe.', 'info');
+        }
+
+        // --- VIEW CONTROLS ---
+
+        function switchView(viewName) {
+            // Sécurité: Empêcher les non-admins de voir le dashboard et les projections
+            if ((viewName === 'dashboard' || viewName === 'projections') && !window.isAdmin) {
+                showMessageBox('Accès Refusé', 'Cette vue est réservée aux administrateurs.', 'error');
+                viewName = 'team'; // Revenir à la vue par défaut
+            }
+
+            views.forEach(view => {
+                $(`${view}-view`).classList.add('hidden');
+                $(`nav-${view}`).classList.remove('active');
+            });
+            
+            $(`${viewName}-view`).classList.remove('hidden');
+            $(`nav-${viewName}`).classList.add('active');
+
+            if (viewName === 'team') {
+                updateTeamView();
+            } else if (viewName === 'dashboard') {
+                updateDashboardView();
+            } else if (viewName === 'contacts') {
+                updateContactsTable(); // Rafraîchir la table des contacts
+            }
+            // Ajoutez d'autres mises à jour de vue ici
+        }
+
+        function updateLoginSelect() {
+            const selectEl = $('splash-login-member-select');
+            selectEl.innerHTML = '';
+
+            if (window.teamMembers.length === 0) {
+                // Si la liste est vide, on affiche le panneau de bootstrap
+                $('splash-bootstrap-panel').classList.remove('hidden');
+                $('splash-login-form').classList.add('hidden');
+                
+                // Mettre à jour les instructions de bootstrap pour la règle de sécurité si une erreur persiste
+                if (window.isAuthReady) {
+                    $('bootstrap-instructions').innerHTML = `
+                        Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.
+                        <p class="text-red-500 text-xs mt-2 font-semibold">
+                            Si vous avez une erreur de 'Permissions' après le clic, vous devez mettre à jour les règles Firestore.
+                        </p>`;
+                }
+
+            } else {
+                // Si des membres existent, on affiche le formulaire de connexion
+                $('splash-bootstrap-panel').classList.add('hidden');
+                $('splash-login-form').classList.remove('hidden');
+                
+                // Remplir le sélecteur
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "-- Sélectionnez votre nom --";
+                selectEl.appendChild(defaultOption);
+
+                window.teamMembers.forEach(member => {
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = member.name;
+                    selectEl.appendChild(option);
+                });
+            }
+
+            // Mettre à jour le sélecteur admin pour la vue Team
+            const adminSelect = $('admin-team-member-select');
+            adminSelect.innerHTML = '';
+            
+            const currentOption = document.createElement('option');
+            currentOption.value = 'current';
+            currentOption.textContent = '-- Mes Contacts --';
+            adminSelect.appendChild(currentOption);
+
+            if (window.isAdmin) {
+                 const allOption = document.createElement('option');
+                 allOption.value = 'all';
+                 allOption.textContent = 'TOUS LES CONTACTS (Admin)';
+                 adminSelect.appendChild(allOption);
+            }
+            
+            window.teamMembers.forEach(member => {
+                if (member.id !== window.currentTeamMemberId) { // Ne pas dupliquer "Mes Contacts"
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = member.name;
+                    adminSelect.appendChild(option);
+                }
+            });
+            adminSelect.value = 'current'; // Sélectionner par défaut l'utilisateur courant
+        }
+
+
+        // --- CRUD LOGIC ---
+
+        async function handleBootstrapClick() {
+            const nameInput = $('bootstrap-member-name');
+            const name = nameInput.value.trim();
+            const errorEl = $('bootstrap-error-message');
+            errorEl.classList.add('hidden');
+
+            if (name === "") {
+                errorEl.textContent = "Veuillez entrer un nom.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (!window.isAuthReady) {
+                 errorEl.textContent = "Authentification Firebase non prête. Veuillez attendre quelques secondes et réessayer.";
+                 errorEl.classList.remove('hidden');
+                 return;
+            }
+
+            const isDamien = name.toLowerCase() === 'damien';
+            const authKey = generateSecretKey(10);
+            
+            const memberData = {
+                name: name,
+                authKey: authKey, // Clé de connexion pour la session suivante
+                isAdmin: isDamien,
+                createdAt: serverTimestamp()
+            };
+
+            try {
+                const teamMembersRef = getPublicCollectionRef('teamMembers');
+                const docRef = await addDoc(teamMembersRef, memberData);
+                
+                // Succès : Simuler la connexion avec le nouveau membre
+                const newMember = { ...memberData, id: docRef.id };
+
+                // Afficher la clé de connexion pour la première fois
+                showMessageBox('Connexion réussie', 
+                    `Le membre "${name}" a été créé. C'est votre CLÉ SECRÈTE de connexion: 
+                     <span class="font-mono text-lg text-blue-800">${authKey}</span>. 
+                     Conservez-la pour les prochaines connexions.`, 'success', true);
+                
+                setCurrentUser(newMember);
+
+            } catch (error) {
+                console.error("Erreur Firestore lors du bootstrap:", error);
+                
+                let userMessage = "Erreur lors de la création du membre dans la base de données. ";
+                if (error.message.includes("permission")) {
+                     userMessage = "Erreur lors de la création du membre dans la base de données. **Missing or insufficient permissions.** Vous devez vérifier et mettre à jour vos règles de sécurité Firestore.";
+                } else {
+                     userMessage += error.message;
+                }
+
+                errorEl.textContent = userMessage;
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        async function handleTeamLogin() {
+            const selectEl = $('splash-login-member-select');
+            const keyInput = $('splash-auth-key-input');
+            const errorEl = $('splash-login-error-message');
+            errorEl.classList.add('hidden');
+
+            const memberId = selectEl.value;
+            const key = keyInput.value.trim();
+
+            if (!memberId || key === "") {
+                errorEl.textContent = "Veuillez sélectionner un nom et entrer la clé.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const member = window.teamMembers.find(m => m.id === memberId && m.authKey === key);
+
+            if (member) {
+                setCurrentUser(member);
+                keyInput.value = ''; // Clear key
+            } else {
+                errorEl.textContent = "Clé de connexion incorrecte pour ce membre.";
+                errorEl.classList.remove('hidden');
+            }
+        }
+        
+        async function handleAddTeamMember() {
+            const nameInput = $('new-team-member');
+            const name = nameInput.value.trim();
+
+            if (!window.isAdmin || name === "") return;
+
+            // Check if member name already exists (simple check)
+            if (window.teamMembers.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+                 showMessageBox('Erreur', `Le membre "${name}" existe déjà.`, 'error');
+                 return;
+            }
+            
+            const isDamien = name.toLowerCase() === 'damien';
+            const authKey = generateSecretKey(10);
+            
+            const memberData = {
+                name: name,
+                authKey: authKey,
+                isAdmin: isDamien,
+                createdAt: serverTimestamp()
+            };
+
+            try {
+                const teamMembersRef = getPublicCollectionRef('teamMembers');
+                await addDoc(teamMembersRef, memberData);
+                nameInput.value = '';
+                showMessageBox('Membre Ajouté', `"${name}" a été ajouté. Clé: ${authKey}`, 'success');
+            } catch (error) {
+                console.error("Erreur d'ajout de membre:", error);
+                showMessageBox('Erreur', "Échec de l'ajout du membre.", 'error');
+            }
+        }
+
+        async function handleDeleteTeamMember(memberId) {
+            if (!window.isAdmin) return;
+
+            // Protection: empêcher un admin de se supprimer lui-même (trop risqué)
+            if (memberId === window.currentTeamMemberId) {
+                showMessageBox('Interdit', "Vous ne pouvez pas vous supprimer vous-même.", 'error');
+                return;
+            }
+            
+            // Protection: empêcher la suppression si des contacts sont encore assignés
+            const contactsAssigned = window.contacts.some(c => c.assignedToId === memberId);
+            if (contactsAssigned) {
+                showMessageBox('Interdit', "Ce membre a encore des contacts assignés. Réassignez-les d'abord.", 'error');
+                return;
+            }
+
+            try {
+                const teamMembersRef = getPublicCollectionRef('teamMembers');
+                await deleteDoc(doc(teamMembersRef, memberId));
+                showMessageBox('Membre Supprimé', "Le membre a été supprimé.", 'success');
+            } catch (error) {
+                console.error("Erreur de suppression de membre:", error);
+                showMessageBox('Erreur', "Échec de la suppression du membre.", 'error');
+            }
+        }
+        
+        async function handleAssignContact(contactId, teamMemberId) {
+            if (!window.isAdmin) return;
+            
+            try {
+                const contactsRef = getPublicCollectionRef('contacts');
+                const member = window.teamMembers.find(m => m.id === teamMemberId);
+                
+                let updateData = {};
+                if (teamMemberId === 'unassigned') {
+                    // Désassigner le contact
+                    updateData = {
+                        assignedTo: null,
+                        assignedToId: null,
+                        assignedBy: window.currentTeamMemberName,
+                        assignedAt: serverTimestamp()
+                    };
+                } else if (member) {
+                    // Assigner le contact
+                    updateData = {
+                        assignedTo: member.name,
+                        assignedToId: member.id,
+                        assignedBy: window.currentTeamMemberName,
+                        assignedAt: serverTimestamp()
+                    };
+                } else {
+                    console.error("Membre non trouvé pour l'assignation.");
+                    return;
+                }
+
+                await updateDoc(doc(contactsRef, contactId), updateData);
+                showMessageBox('Assignation Réussie', `Contact mis à jour.`, 'success');
+
+            } catch (error) {
+                console.error("Erreur d'assignation de contact:", error);
+                showMessageBox('Erreur', "Échec de l'assignation du contact.", 'error');
+            }
+        }
+
+        async function handleStatusUpdate(contactId, type, value) {
+            if (!window.currentTeamMemberId) return;
+
+             // Sécurité: Empêcher un membre de l'équipe de modifier le statut s'il n'est pas assigné au contact
+            const contactToUpdate = window.contacts.find(c => c.id === contactId);
+            if (contactToUpdate && contactToUpdate.assignedToId !== window.currentTeamMemberId && !window.isAdmin) {
+                showMessageBox('Accès Refusé', 'Vous ne pouvez modifier que les contacts qui vous sont assignés.', 'error');
+                return;
+            }
+
+            try {
+                const contactsRef = getPublicCollectionRef('contacts');
+                let updateData = {};
+                
+                if (type === 'status') {
+                    // Si on change le statut, on met à jour le champ 'status'
+                    updateData.status = value;
+                } else if (type === 'hasVoted') {
+                    // Si on change l'état 'A Voté', on met à jour le champ 'hasVoted' (conversion de string en boolean)
+                    updateData.hasVoted = value === 'true';
+                } else {
+                    console.error("Type de mise à jour non reconnu:", type);
+                    return;
+                }
+
+                // Ajout de métadonnées de modification si nécessaire
+                updateData.lastUpdatedBy = window.currentTeamMemberName;
+                updateData.lastUpdatedAt = serverTimestamp();
+
+                await updateDoc(doc(contactsRef, contactId), updateData);
+                // Le onSnapshot s'occupera de rafraîchir l'interface
+
+            } catch (error) {
+                console.error("Erreur de mise à jour du statut:", error);
+                showMessageBox('Erreur', "Échec de la mise à jour du contact.", 'error');
+            }
+        }
+
+
+        // --- DISPLAY LOGIC ---
+
+        // Fonction pour générer le sélecteur d'équipe pour l'assignation (Admin View)
+        function generateTeamMemberSelect(contactId, currentAssignedId) {
+            let options = `<option value="unassigned">-- Non Assigné --</option>`;
+            
+            window.teamMembers.forEach(member => {
+                const selected = member.id === currentAssignedId ? 'selected' : '';
+                options += `<option value="${member.id}" ${selected}>${member.name}</option>`;
+            });
+
+            return `
+                <select 
+                    class="assign-member-select mt-1 block w-full text-xs py-1 px-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    data-contact-id="${contactId}"
+                >
+                    ${options}
+                </select>
+            `;
+        }
+
+        // Fonction pour générer le sélecteur de statut (Team Member View)
+        function generateStatusSelect(contactId, currentStatus) {
+            let options = '';
+            Object.keys(TEAM_STATUS_OPTIONS).forEach(key => {
+                const selected = key === currentStatus ? 'selected' : '';
+                options += `<option value="${key}" ${selected}>${TEAM_STATUS_OPTIONS[key]}</option>`;
+            });
+
+            return `
+                <select 
+                    class="status-update-select block w-full text-xs py-1 px-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    data-contact-id="${contactId}"
+                    data-field="status"
+                    style="background-color: ${STATUS_COLORS[currentStatus] || '#e5e7eb'}; color: ${currentStatus === 'À contacter' ? '#1f2937' : 'white'};"
+                >
+                    ${options}
+                </select>
+            `;
+        }
+        
+        // Fonction pour générer le sélecteur "A Voté" (Team Member View)
+        function generateHasVotedSelect(contactId, hasVoted) {
+            const options = `
+                <option value="false" ${!hasVoted ? 'selected' : ''}>Non ❌</option>
+                <option value="true" ${hasVoted ? 'selected' : ''}>Oui ✅</option>
+            `;
+
+            return `
+                <select 
+                    class="has-voted-update-select block w-full text-xs py-1 px-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    data-contact-id="${contactId}"
+                    data-field="hasVoted"
+                >
+                    ${options}
+                </select>
+            `;
+        }
+
+
+        function updateContactsTable() {
+            const contactsBody = $('contacts-table-body');
+            contactsBody.innerHTML = '';
+            
+            if (window.contacts.length === 0) {
+                 contactsBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">Aucun contact trouvé. Les données seront synchronisées depuis Sheets.</td></tr>`;
+                 return;
+            }
+            
+            // Filtrage/Recherche (logique simple conservée pour la réactivité)
+            const searchText = ($('search-contacts').value || '').toLowerCase();
+            const filteredContacts = window.contacts.filter(contact => {
+                 if (searchText === '') return true;
+                 
+                 // Rechercher dans Nom, Prénoms, Email, Téléphone
+                 const name = (contact.nomUsage || contact.nomNaissance || '').toLowerCase();
+                 const firstName = (contact.prenoms || '').toLowerCase();
+                 const email = (contact.adresseElectronique || '').toLowerCase();
+                 const phone = (contact.telephone || '').toLowerCase();
+                 
+                 return name.includes(searchText) || 
+                        firstName.includes(searchText) || 
+                        email.includes(searchText) ||
+                        phone.includes(searchText);
+            });
+
+
+            filteredContacts.forEach(contact => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                // Le sélecteur d'assignation est seulement visible pour les Admins
+                const assignCellContent = window.isAdmin 
+                    ? generateTeamMemberSelect(contact.id, contact.assignedToId)
+                    : '<span class="text-gray-400">N/A</span>';
+
+
+                row.innerHTML = `
+                    <!-- Champs d'information étendus -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.prenoms || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.dateNaissance || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.adresseElectronique || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.telephone || 'N/A'}</td>
+
+                    <!-- Champs de suivi Campagne -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: ${STATUS_COLORS[contact.status] || '#e5e7eb'}; color: ${contact.status === 'À contacter' ? '#1f2937' : 'white'};">
+                            ${contact.status || 'N/A'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${contact.assignedTo || 'Non assigné'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm w-36">
+                        ${assignCellContent}
+                    </td>
+                `;
+                contactsBody.appendChild(row);
+            });
+            
+            // Ajouter les écouteurs pour le changement d'assignation (si admin)
+            if (window.isAdmin) {
+                contactsBody.querySelectorAll('.assign-member-select').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const contactId = e.target.dataset.contactId;
+                        const newMemberId = e.target.value;
+                        handleAssignContact(contactId, newMemberId);
+                    });
+                });
+            }
+        }
+
+        function updateTeamSummary(filteredContacts) {
+            const summaryBody = $('team-summary-body');
+            const teamSummaryTable = $('team-summary-table');
+            summaryBody.innerHTML = '';
+
+            if (filteredContacts.length === 0) {
+                teamSummaryTable.classList.add('hidden');
+                return;
+            }
+            teamSummaryTable.classList.remove('hidden');
+
+            // Initialiser les totaux pour chaque statut
+            const summaryData = {};
+            Object.keys(TEAM_STATUS_OPTIONS).forEach(status => {
+                summaryData[status] = { total: 0, voted: 0, notVoted: 0 };
+            });
+
+            // Remplissage des données
+            filteredContacts.forEach(contact => {
+                const status = contact.status;
+                if (summaryData.hasOwnProperty(status)) {
+                    summaryData[status].total++;
+                    if (contact.hasVoted) {
+                        summaryData[status].voted++;
+                    } else {
+                        summaryData[status].notVoted++;
+                    }
+                }
+            });
+
+            let totalAssigned = 0;
+            let totalVoted = 0;
+            let totalNotVoted = 0;
+
+            // Affichage des lignes du tableau et calcul des totaux
+            Object.keys(TEAM_STATUS_OPTIONS).forEach(status => {
+                const data = summaryData[status];
+                
+                // Si la ligne est vide, on la masque pour plus de clarté
+                if (data.total === 0) return; 
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" 
+                            style="background-color: ${STATUS_COLORS[status] || '#e5e7eb'}; color: ${status === 'À contacter' ? '#1f2937' : 'white'};">
+                            ${status}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 text-right text-gray-700 font-semibold">${data.total}</td>
+                    <td class="px-4 py-2 text-right text-gray-700">${data.voted}</td>
+                    <td class="px-4 py-2 text-right text-gray-700">${data.notVoted}</td>
+                `;
+                summaryBody.appendChild(row);
+
+                totalAssigned += data.total;
+                totalVoted += data.voted;
+                // totalNotVoted est le total des non-votés par catégorie
+                // Le total général non voté est calculé séparément ci-dessous
+            });
+            
+            // Mise à jour du pied de page
+            const trueTotalNotVoted = filteredContacts.filter(c => !c.hasVoted).length;
+            $('summary-total-assigned').textContent = totalAssigned;
+            $('summary-total-voted').textContent = totalVoted;
+            $('summary-total-not-voted').textContent = trueTotalNotVoted;
+        }
+
+        function updateTeamView() {
+            if (!window.currentTeamMemberId) {
+                $('team-contact-placeholder').classList.remove('hidden');
+                $('team-contact-list-container').classList.add('hidden');
+                $('team-summary-table').classList.add('hidden');
+                return;
+            }
+
+            // 1. Affichage de la liste d'équipe (Admin)
+            if (window.isAdmin) {
+                const teamListEl = $('team-list');
+                teamListEl.innerHTML = '';
+                window.teamMembers.forEach(member => {
+                    const el = document.createElement('div');
+                    el.className = 'p-2 bg-gray-50 border rounded-md flex justify-between items-center';
+                    el.innerHTML = `
+                        <div>
+                            <span class="font-semibold text-gray-800">${member.name}</span> 
+                            <span class="text-gray-500 text-xs">(${member.isAdmin ? 'ADMIN' : 'Membre'})</span><br>
+                            <span class="font-mono text-blue-600 text-[10px] break-all">Clé: ${member.authKey}</span>
+                        </div>
+                        <button class="delete-member-btn px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200" data-member-id="${member.id}">
+                            Supprimer
+                        </button>
+                    `;
+                    teamListEl.appendChild(el);
+                });
+                // Ajouter les écouteurs pour les boutons de suppression
+                teamListEl.querySelectorAll('.delete-member-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const memberId = e.currentTarget.dataset.memberId;
+                         const memberName = window.teamMembers.find(m => m.id === memberId)?.name;
+                         showMessageBox('Confirmation de Suppression', 
+                             `Êtes-vous sûr de vouloir supprimer ${memberName} ? <br> (Note: Tous les contacts doivent d'abord être réassignés). <br><button onclick="handleDeleteTeamMember('${memberId}')" class="mt-2 px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700">Oui, Supprimer</button>`, 
+                             'warning', true);
+                    });
+                });
+            }
+
+
+            // 2. Détermination des contacts à afficher
+            $('team-contact-placeholder').classList.add('hidden');
+            $('team-contact-list-container').classList.remove('hidden');
+            
+            const teamContactsBody = $('team-contacts-table-body');
+            teamContactsBody.innerHTML = '';
+            
+            let memberIdToFilter = window.currentTeamMemberId;
+            const adminSelect = $('admin-team-member-select');
+            
+            if (window.isAdmin && adminSelect.value !== 'current') {
+                memberIdToFilter = adminSelect.value === 'all' ? 'all' : adminSelect.value;
+            }
+
+            const filteredContacts = window.contacts.filter(c => 
+                memberIdToFilter === 'all' || c.assignedToId === memberIdToFilter
+            ).sort((a, b) => (a.status || '').localeCompare(b.status || '')); // Trier par statut pour la clarté
+
+            // 3. Mise à jour du tableau récapitulatif
+            updateTeamSummary(filteredContacts);
+
+            if (filteredContacts.length === 0) {
+                 teamContactsBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Aucun contact assigné.</td></tr>`;
+                 return;
+            } 
+            
+            // 4. Remplissage du tableau des contacts
+            filteredContacts.forEach(contact => { 
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${contact.nomUsage || contact.nomNaissance || 'N/A'}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${contact.prenoms || 'N/A'}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 relative">
+                        <!-- Affichage du numéro de téléphone avec un contrôle de confidentialité -->
+                        ${contact.telephone ? `
+                            <span class="contact-number">${contact.telephone.substring(0, 4)}...</span>
+                            <span class="controlled-message absolute bg-blue-50 text-blue-700 border-blue-200" style="bottom: 0px; left: 50%; transform: translateX(-50%); padding: 2px 4px; border-radius: 4px;">Pour contact</span>
+                        ` : 'N/A'}
+                    </td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm w-48">
+                        ${generateStatusSelect(contact.id, contact.status)}
+                    </td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm w-36">
+                        ${generateHasVotedSelect(contact.id, contact.hasVoted)}
+                    </td>
+                `;
+                teamContactsBody.appendChild(row);
+            });
+            
+            // 5. Ajout des écouteurs pour les mises à jour de statut (pour les membres et l'admin)
+            teamContactsBody.querySelectorAll('.status-update-select, .has-voted-update-select').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const contactId = e.target.dataset.contactId;
+                    const field = e.target.dataset.field;
+                    const value = e.target.value;
+                    handleStatusUpdate(contactId, field, value);
+                });
+            });
+        }
+        
+        function updateDashboardView() {
+            if (!window.isAdmin) return;
+            
+            const totalContacts = window.contacts.length;
+            const certainVotes = window.contacts.filter(c => c.status === 'Acquis').length;
+            const hasVoted = window.contacts.filter(c => c.hasVoted).length;
+
+            $('kpi-total-contacts').textContent = totalContacts;
+            $('kpi-certain-votes').textContent = certainVotes;
+            $('kpi-has-voted').textContent = hasVoted;
+
+            const progress = totalContacts > 0 ? Math.min(100, (certainVotes / window.votesGoal) * 100) : 0;
+            $('goal-progress-bar').style.width = `${progress}%`;
+            $('goal-progress-text').textContent = `${certainVotes} / ${window.votesGoal}`;
+            $('goal-title').textContent = `Objectif de ${window.votesGoal} votes certains`;
+            
+            // Calcul des votes projetés (Simplifié: certain + probable * 0.5)
+            const probableVotes = window.contacts.filter(c => c.status === 'Probable').length;
+            const projectedVotes = Math.round(certainVotes + (probableVotes * 0.5));
+            $('kpi-projected-votes').textContent = projectedVotes;
+            
+            updateStatusChart();
+        }
+
+        function updateStatusChart() {
+            if (!window.isAdmin) return;
+
+            const statusCounts = Object.keys(STATUS_OPTIONS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
+            window.contacts.forEach(c => {
+                if (statusCounts.hasOwnProperty(c.status)) {
+                    statusCounts[c.status]++;
+                }
+            });
+
+            const data = {
+                labels: Object.keys(statusCounts),
+                datasets: [{
+                    label: 'Répartition des Contacts',
+                    data: Object.values(statusCounts),
+                    backgroundColor: Object.values(STATUS_COLORS),
+                    hoverOffset: 4
+                }]
+            };
+
+            const config = {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { enabled: true }
+                    }
+                }
+            };
+
+            if (statusChartInstance) {
+                statusChartInstance.data = data;
+                statusChartInstance.update();
+            } else {
+                statusChartInstance = new Chart($('status-chart'), config);
+            }
+        }
+
+        function updateAll() {
+            // Mise à jour de la vue de connexion/bootstrap
+            updateLoginSelect();
+            
+            // Si l'utilisateur est connecté, mettre à jour toutes les vues pertinentes
+            if (window.currentTeamMemberId) {
+                updateContactsTable();
+                updateTeamView();
+                updateDashboardView();
+            }
+        }
+        window.updateAll = updateAll; // Rendre la fonction accessible globalement pour les listeners
+        window.updateLoginSelect = updateLoginSelect;
+        window.handleDeleteTeamMember = handleDeleteTeamMember; // Rendre la fonction accessible pour le showMessageBox
+        
+        // Fonction utilitaire pour remplacer alert()
+        function showMessageBox(title, message, type, isHtml = false) {
+            const container = document.body;
+            // Retirer les boîtes précédentes si elles existent (sauf si c'est la boîte de confirmation, ce qui est géré manuellement pour éviter les conflits)
+            document.querySelectorAll('.fixed.inset-0.bg-black.bg-opacity-50').forEach(box => box.remove());
+
+            const box = document.createElement('div');
+            box.className = `fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50`;
+            
+            let color, icon, buttonHtml;
+            if (type === 'error') {
+                color = 'bg-red-100 border-red-400 text-red-700';
+                icon = '❌';
+                buttonHtml = `<button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="this.closest('.fixed').remove()">Compris</button>`;
+            } else if (type === 'success') {
+                color = 'bg-green-100 border-green-400 text-green-700';
+                icon = '✅';
+                buttonHtml = `<button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="this.closest('.fixed').remove()">OK</button>`;
+            } else if (type === 'warning') {
+                color = 'bg-yellow-100 border-yellow-400 text-yellow-700';
+                icon = '⚠️';
+                 // Le bouton est inclus dans le message HTML pour les confirmations complexes
+                if (!isHtml) {
+                    buttonHtml = `<button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="this.closest('.fixed').remove()">Fermer</button>`;
+                } else {
+                    buttonHtml = ''; // L'utilisateur doit fournir son propre bouton de fermeture/action
+                }
+            } else {
+                color = 'bg-blue-100 border-blue-400 text-blue-700';
+                icon = 'ℹ️';
+                buttonHtml = `<button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="this.closest('.fixed').remove()">Compris</button>`;
+            }
+            
+            box.innerHTML = `
+                <div class="${color} border-l-4 p-6 rounded-xl shadow-2xl max-w-md relative">
+                    <p class="font-bold text-xl mb-2">${icon} ${title}</p>
+                    <div class="mt-1 text-sm">${isHtml ? message : message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                    ${buttonHtml}
+                </div>
+            `;
+            container.appendChild(box);
+        }
+
+        // --- FIREBASE INITIALIZATION & AUTH ---
+        async function initializeFirebase() {
+            console.log("Configuration Firebase finale utilisée:", firebaseConfig);
+
+            // Vérification critique
+            if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+                const errorMsg = "Erreur critique: apiKey, authDomain, ou projectId manquant. Vérifiez vos variables.";
+                console.error(errorMsg);
+                $('critical-error-message').textContent = errorMsg;
+                $('critical-error-message').classList.remove('hidden');
+                $('splash-login-card').classList.add('hidden');
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app); 
+                
+                // 1. Authentification
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                userId = auth.currentUser?.uid || crypto.randomUUID(); 
+                window.isAuthReady = true;
+
+                // 2. Démarrer l'écoute des données publiques
+                loadPublicData();
+                
+                $('loading-indicator').classList.add('hidden');
+                $('user-id').textContent = userId.substring(0, 8) + '...';
+
+                // 3. Écouteur de l'état d'authentification (pour associer le membre)
+                onAuthStateChanged(auth, (user) => {
+                    if (user && window.isAuthReady) {
+                        // L'utilisateur Firebase est connecté. Nous devons maintenant le lier à un membre de l'équipe (TeamMember)
+                        
+                        // Si l'utilisateur est déjà connecté en tant que membre d'équipe, on ne fait rien
+                        if (window.currentTeamMemberId) return;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                $('critical-error-message').textContent = "Erreur de connexion Firebase: " + error.message;
+                $('critical-error-message').classList.remove('hidden');
+            }
+        }
+
+        // --- FIRESTORE LISTENERS (Real-time updates) ---
+        function loadPublicData() {
+            if (!db) return;
+            
+            // 1. Listen for Team Members (Public/Shared data)
+            const teamMembersRef = getPublicCollectionRef('teamMembers');
+            if (teamMembersRef) {
+                onSnapshot(teamMembersRef, (snapshot) => {
+                    window.teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Vérifier si un membre est déjà connecté après le bootstrap réussi
+                    if (window.currentTeamMemberId) {
+                         const connectedMember = window.teamMembers.find(m => m.id === window.currentTeamMemberId);
+                         if (connectedMember) {
+                            setCurrentUser(connectedMember); // Rafraîchir l'état si l'ID est toujours présent
+                         } else {
+                            // Le membre a été supprimé ou l'état est cassé, forcer la déconnexion
+                            handleLogout();
+                         }
+                    }
+                    window.updateAll();
+                }, (error) => {
+                    console.error("Error fetching team members:", error);
+                    // Si l'erreur persiste et qu'il n'y a pas de membres, c'est une erreur de permission
+                    if (window.teamMembers.length === 0 && error.message.includes("permission")) {
+                        $('bootstrap-instructions').innerHTML = `
+                            Créez le premier compte. Entrez **Damien** pour obtenir les droits **Administrateur**.
+                            <p class="text-red-500 text-xs mt-2 font-semibold">
+                                ⚠️ **Erreur de Permissions Firestore.** Vous devez mettre à jour les règles de sécurité dans votre console Firebase.
+                            </p>`;
+                    }
+                });
+            }
+            
+            // 2. Listen for Contacts (Public/Shared data)
+            const contactsRef = getPublicCollectionRef('contacts');
+            if (contactsRef) {
+                onSnapshot(contactsRef, (snapshot) => {
+                    window.contacts = snapshot.docs.map(doc => ({ 
+                        id: doc.id, 
+                        ...doc.data(), 
+                        hasVoted: doc.data().hasVoted || false, 
+                        assignedTo: doc.data().assignedTo || null, 
+                        assignedToId: doc.data().assignedToId || null, 
+                        status: doc.data().status || 'À contacter',
+                        // Nouveaux champs pour la synchro Sheets (s'assurer qu'ils existent pour éviter les erreurs d'affichage)
+                        nomNaissance: doc.data().nomNaissance || '',
+                        nomUsage: doc.data().nomUsage || '',
+                        prenoms: doc.data().prenoms || '',
+                        dateNaissance: doc.data().dateNaissance || '',
+                        adresseElectronique: doc.data().adresseElectronique || '',
+                        telephone: doc.data().telephone || '', // Champ unifié pour Téléphone/WhatsApp
+                        // Les autres champs (Lieu/Pays Naissance, Adresse, CP, Regex) sont stockés mais non affichés pour simplifier le tableau
+                    }));
+                    window.updateAll();
+                }, (error) => console.error("Error fetching contacts:", error));
+            }
+        }
+
+        function setupPrivateDataListeners() {
+            if (!db || !window.isAuthReady) return;
+            
+            // 3. Listen for Projection History (User-specific private data)
+            const historyRef = getPrivateCollectionRef('projectionHistory');
+            if (historyRef) {
+                onSnapshot(historyRef, (snapshot) => {
+                    window.projectionHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    const lastHistory = window.projectionHistory[window.projectionHistory.length - 1];
+                    if (lastHistory && lastHistory.goal) {
+                        window.votesGoal = lastHistory.goal;
+                    }
+                    window.updateAll();
+                }, (error) => console.error("Error fetching history:", error));
+            }
+        }
+        
+        function handleSyncInfoClick() {
+            showMessageBox('Informations sur la Synchronisation', 
+                `
+                <p class="mb-2">La **Gestion des Contacts** est configurée pour utiliser la **synchronisation bidirectionnelle** via une feuille Google Sheets.</p>
+                <h4 class="font-bold mt-3 mb-1">Comment cela fonctionne :</h4>
+                <ul class="list-disc list-inside text-sm space-y-1">
+                    <li>La feuille Sheets est la source de vérité pour les données d'identité (Nom, Prénom, Email, Téléphone...).</li>
+                    <li>Un script Google Apps Script (à configurer par l'Admin) surveille Sheets et met à jour Firestore.</li>
+                    <li>**Attention :** Les champs de suivi de campagne (Statut, A Voté, Assigné) sont gérés **UNIQUEMENT** par cette application (via Firestore) pour éviter les conflits de données.</li>
+                </ul>
+                <p class="mt-3 font-semibold text-blue-800 text-sm">Action Requise : Configurer le pont Apps Script vers votre base Firestore.</p>
+                `, 'info', true);
+        }
+
+
+        // --- EVENT LISTENERS SETUP ---
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('#main-nav a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    switchView(e.currentTarget.dataset.view);
+                });
+            });
+
+            // Splash Screen buttons
+            $('bootstrap-add-member-btn').addEventListener('click', handleBootstrapClick);
+            $('splash-team-login-btn').addEventListener('click', handleTeamLogin);
+            
+            // Main App buttons
+            $('team-logout-btn').addEventListener('click', handleLogout);
+            $('add-team-member-btn').addEventListener('click', handleAddTeamMember);
+            
+            // Sync Info Button
+            $('sync-info-btn').addEventListener('click', handleSyncInfoClick);
+            
+            // Admin View Selector in Team View
+            $('admin-team-member-select').addEventListener('change', updateTeamView);
+            
+            // Search Input
+            $('search-contacts').addEventListener('input', updateContactsTable);
+            
+            // Set initial active view (Team view is the default landing after login)
+            const defaultView = window.isAdmin ? 'dashboard' : 'contacts';
+            views.forEach(view => $(`nav-${view}`).classList.remove('active'));
+            $(`nav-team`).classList.add('active'); // Default selected tab
+        }
+
+
+        window.onload = () => {
+            initializeFirebase(); // Démarre la connexion Firebase et l'écoute des données publiques
+            setupEventListeners(); // Configure les gestionnaires d'événements
+        };
+    </script>
+</body>
+</html>
