@@ -1,21 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Projets Élections (Fusionné)</title>
-    <!-- Ajoutez ici vos liens CSS si nécessaire -->
-</head>
-<body>
-    <h1>Bienvenue sur le projet élections</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Élections Consulaires 2026 - LNE</title>
+    <!-- Le fichier CSS sera injecté ici par Vite -->
+  </head>
+  <body>
+    <!-- Le div "root" où l'application React sera rendue -->
+    <div id="root"></div>
     
-    <p>Ceci est la page principale du projet.</p>
-
-    <!-- Si vous aviez d'autres éléments dans l'une ou l'autre version, 
-         ils seraient insérés ici, combinés de manière logique. 
-         Par exemple, s'il y avait un script dans la version distante : -->
-    <script>
-        console.log("Le fichier index.html est maintenant fusionné et prêt !");
-    </script>
-</body>
+    <!-- 
+      CORRECTION CRUCIALE: 
+      Nous devons pointer vers le fichier de démarrage principal (main.jsx)
+      en utilisant un chemin relatif à la racine du projet (sans le slash initial), 
+      car le chemin absolu (/src/...) ne fonctionne pas sur les sous-répertoires de GitHub Pages.
+      Vite est ensuite intelligent et le gérera correctement lors du build.
+    -->
+    <script type="module" src="./src/main.jsx"></script> 
+  </body>
 </html>
