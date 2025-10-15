@@ -11,12 +11,12 @@
     <div id="root"></div>
     
     <!-- 
-      CORRECTION CRUCIALE: 
-      Nous devons pointer vers le fichier de démarrage principal (main.jsx)
-      en utilisant un chemin relatif à la racine du projet (sans le slash initial), 
-      car le chemin absolu (/src/...) ne fonctionne pas sur les sous-répertoires de GitHub Pages.
-      Vite est ensuite intelligent et le gérera correctement lors du build.
+      CORRECTION FINALE: Revenir au chemin absolu standard de Vite (/src/main.jsx).
+      C'est la tâche de 'vite.config.js' (avec l'option 'base') de réécrire 
+      ce chemin pendant la phase de 'build' pour qu'il fonctionne dans le sous-répertoire 
+      GitHub Pages. La tentative précédente de chemin relatif a échoué car le serveur
+      a mal identifié le type MIME du fichier source.
     -->
-    <script type="module" src="./src/main.jsx"></script> 
+    <script type="module" src="/src/main.jsx"></script> 
   </body>
 </html>
