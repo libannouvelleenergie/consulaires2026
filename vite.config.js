@@ -1,14 +1,15 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// Référence l'URL de base de votre dépôt GitHub.
-// Ceci est CRUCIAL pour le déploiement sur GitHub Pages pour que les assets soient trouvés.
-const repoName = 'consulaires2026';
-const basePath = `/${repoName}/`;
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Configuration du chemin de base pour le déploiement GitHub Pages
-  base: basePath,
-});
+  
+  // NOUVEAU: Configure le chemin de base (public base path)
+  // Il DOIT correspondre au nom de votre repository GitHub.
+  // Ce chemin sera utilisé comme préfixe pour tous les assets compilés (JS, CSS, images).
+  base: '/consulaires2026/', 
+
+  // Si vous aviez base: './' cela fonctionnerait aussi, mais l'utilisation du nom du repo est plus sécurisée pour le déploiement sur GitHub Pages.
+  // base: './'
+})
