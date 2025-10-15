@@ -2,22 +2,26 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    <!-- 
+      L'icône Vite est souvent placée dans le dossier 'public'. 
+      L'icône React a été vue dans 'dist/assets', donc nous la laissons pour l'instant.
+    -->
+    <!-- <link rel="icon" type="image/svg+xml" href="/vite.svg" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Élections Consulaires 2026 - LNE</title>
-    <!-- Le fichier CSS sera injecté ici par Vite -->
-    <script type="module" crossorigin src="/consulaires2026/assets/index-DeW5ilh4.js"></script>
-    <link rel="stylesheet" crossorigin href="/consulaires2026/assets/index-D_f7dIuO.css">
+    <script type="module" crossorigin src="/consulaires2026/assets/index-B5Qt9EMX.js"></script>
   </head>
   <body>
     <!-- Le div "root" où l'application React sera rendue -->
     <div id="root"></div>
     
     <!-- 
-      CORRECTION FINALE: Revenir au chemin absolu standard de Vite (/src/main.jsx).
-      C'est la tâche de 'vite.config.js' (avec l'option 'base') de réécrire 
-      ce chemin pendant la phase de 'build' pour qu'il fonctionne dans le sous-répertoire 
-      GitHub Pages. La tentative précédente de chemin relatif a échoué car le serveur
-      a mal identifié le type MIME du fichier source.
-    --> 
+      CORRECTION CRITIQUE: 
+      Nous avons retiré l'attribut 'src' pour laisser Vite 
+      injecter le chemin complet et haché (ex: /consulaires2026/assets/index-hache.js) 
+      automatiquement lors du 'npm run build'. 
+      Le fichier source n'a plus besoin de connaître le chemin exact.
+    -->
+    <script type="module"></script>
   </body>
 </html>
