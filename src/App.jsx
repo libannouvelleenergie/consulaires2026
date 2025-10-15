@@ -24,14 +24,11 @@ import {
     Users, 
     Contact, 
     BarChart3, 
-    Save, 
     Trash2, 
-    UserPlus, 
     Phone, 
     MapPin, 
     Zap, 
     Loader,
-    LogIn,
     LogOut,
     User,
     Shield,
@@ -54,14 +51,14 @@ const DEFAULT_FIREBASE_CONFIG = {
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
-// Prioriser la variable globale si elle existe et est valide, sinon utiliser la configuration fournie par l'utilisateur.
+// Prioriser la variable globale si elle existe et est valide, sinon utiliser la configuration par défaut.
 const firebaseConfig = typeof __firebase_config !== 'undefined' && Object.keys(__firebase_config).length > 0
     ? (typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config) 
     : DEFAULT_FIREBASE_CONFIG;
 // --- FIN CONFIGURATION FIREBASE ---
 
 // URL du logo
-const LOGO_URL = "https://www.unenouvelleenergie.fr/app/uploads/2025/08/logo.svg";
+const LOGO_URL = "https://www.unenouvelleenergie.fr/app/uploads/2025/08/logo.svg"; 
 
 // Définition des poids de projection pour chaque statut (en %)
 const PROJECTION_WEIGHTS = {
@@ -91,6 +88,23 @@ const STATUS_COLORS = {
     'vote_valide': 'bg-purple-600 text-white',
 };
 
+// --- UTILS FIREBASE PATHS ---
+
+/**
+ * Construit le chemin de la collection de contacts de l'utilisateur.
+ * @param {string} currentUserId L'UID de l'utilisateur.
+ * @returns {string} Le chemin Firestore.
+ */
+const getContactsPath = (currentUserId) => 
+    `artifacts/${appId}/users/${currentUserId}/contacts`;
+
+/**
+ * Construit le chemin de la collection publique des membres du staff.
+ * @returns {string} Le chemin Firestore.
+ */
+const getStaffPath = () => 
+    `artifacts/${appId}/public/data/staff_members`;
+
 // --- Composant pour charger Tailwind CSS et gérer les styles de secours ---
 const GlobalStyles = () => {
     useEffect(() => {
@@ -118,7 +132,7 @@ const GlobalStyles = () => {
                 to { transform: rotate(360deg); }
             }
             .animate-spin { animation: spin 1s linear infinite; }
-            .font-sans { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+            .font-sans { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
             
             /* --- Layout Général --- */
             .h-screen { height: 100vh; }
@@ -286,7 +300,7 @@ const GlobalStyles = () => {
 
 /**
  * Initialise Firebase et gère l'authentification.
- * @returns {{db: Firestore | null, auth: Auth | null, userId: string | null, loading: boolean, login: Function, logout: Function, authReady: boolean, isAdmin: boolean}}
+ * @returns {{db: Firestore | null, auth: Auth | null, userId: string | null, loading: boolean, login: Function, logout: Function, authReady: boolean, isAdmin: boolean, isFirebaseConfigured: boolean}}
  */
 const useFirebaseInit = () => {
     const [db, setDb] = useState(null);
@@ -334,10 +348,10 @@ const useFirebaseInit = () => {
 
         const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
             if (user) {
+                // Simuler le rôle Admin si l'UID est le mock admin
+                const isUserAdmin = user.uid === "mock_admin_uid";
                 setUserId(user.uid);
-                // Logique de rôle simplifiée pour la démo
-                // EN PRODUCTION: Utiliser user.getIdTokenResult(true) pour lire les customClaims
-                setIsAdmin(user.uid === "mock_admin_uid"); 
+                setIsAdmin(isUserAdmin); 
             } else {
                 setUserId(null);
                 setIsAdmin(false);
@@ -354,11 +368,15 @@ const useFirebaseInit = () => {
                     await signInWithCustomToken(authInstance, initialAuthToken);
                     console.log("Authenticated with custom token.");
                 } else if (!authInstance.currentUser) {
+                    // Tente de se connecter anonymement si non authentifié par token
                     await signInAnonymously(authInstance); 
                     console.log("Authenticated anonymously.");
                 }
             } catch (error) {
                 console.error("Erreur lors de l'authentification initiale:", error);
+                // Si l'authentification échoue, on assure un état authReady
+                setAuthReady(true);
+                setLoading(false);
             }
         };
 
@@ -380,19 +398,30 @@ const useFirebaseInit = () => {
             return;
         }
 
-        // Mode Firebase Réel
+        // Mode Firebase Réel: Utilise signInAnonymously pour obtenir un UID si nécessaire
         try {
-            await signInAnonymously(auth);
-
-            if (auth.currentUser) {
-                if (type === 'admin') {
-                    // Simuler l'accès admin pour le développement
-                    setIsAdmin(true); 
-                } else {
-                    setIsAdmin(false);
-                }
+            let user = auth.currentUser;
+            if (!user) {
+                const result = await signInAnonymously(auth);
+                user = result.user;
             }
-            console.log(`Connexion anonyme réussie. Rôle simulé: ${type}`);
+            
+            // Simuler la logique de rôle après connexion/identification
+            if (user) {
+                // Utilise l'UID réel de Firebase
+                let finalUid = user.uid;
+                let finalIsAdmin = false;
+                
+                // Si l'utilisateur clique sur Admin, nous forçons l'UID du mock admin pour la démo
+                if (type === 'admin') {
+                    finalUid = 'mock_admin_uid';
+                    finalIsAdmin = true;
+                }
+                
+                setUserId(finalUid);
+                setIsAdmin(finalIsAdmin);
+                console.log(`Connexion réussie via Firebase. Rôle simulé: ${type}`);
+            }
         } catch (error) {
             console.error("Erreur lors de la connexion:", error);
             setUserId(null);
@@ -416,88 +445,7 @@ const useFirebaseInit = () => {
     return { db, auth, userId, loading, login, logout, authReady, isAdmin, isFirebaseConfigured };
 };
 
-/**
- * Construit le chemin de la collection de contacts pour l'utilisateur actuel.
- * @param {string} currentUserId L'UID de l'utilisateur.
- * @returns {string} Le chemin Firestore.
- */
-const getContactsPath = (currentUserId) => 
-    `artifacts/${appId}/users/${currentUserId}/contacts`;
-
 // --- Composants d'Interface Utilisateur (UI) ---
-
-const ContactForm = ({ contact, onSubmit, onCancel, userId, isFirebaseConfigured }) => {
-    const isNew = !contact?.id;
-    const [formData, setFormData] = useState({
-        name: contact?.name || '',
-        phone: contact?.phone || '',
-        region: contact?.region || '',
-        status: contact?.status || 'a_contacter',
-        notes: contact?.notes || '',
-    });
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!formData.name || !formData.phone) {
-            console.error('Le nom et le téléphone sont obligatoires.');
-            return;
-        }
-        
-        const timestamp = isFirebaseConfigured ? serverTimestamp() : new Date();
-
-        onSubmit({
-            ...formData,
-            id: contact?.id || crypto.randomUUID(), 
-            ownerId: userId,
-            // Utiliser serverTimestamp pour Firestore, ou Date pour le mode démo.
-            createdAt: contact?.createdAt || timestamp, 
-            updatedAt: timestamp,
-        });
-    };
-
-    return (
-        <div className="p-4 bg-white rounded-xl shadow-lg border border-gray-100">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">{isNew ? 'Nouveau Contact' : 'Modifier Contact'}</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <InputGroup icon={<Contact className="w-5 h-5 text-indigo-500" />} label="Nom Complet" name="name" value={formData.name} onChange={handleChange} required />
-                <InputGroup icon={<Phone className="w-5 h-5 text-indigo-500" />} label="Téléphone" name="phone" type="tel" value={formData.phone} onChange={handleChange} required />
-                <InputGroup icon={<MapPin className="w-5 h-5 text-indigo-500" />} label="Région Consulaire" name="region" value={formData.region} onChange={handleChange} />
-                <SelectGroup label="Statut de Suivi" name="status" value={formData.status} onChange={handleChange}>
-                    {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                    ))}
-                </SelectGroup>
-                <div className="flex flex-col">
-                    <label htmlFor="notes" className="text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea 
-                        id="notes" 
-                        name="notes" 
-                        value={formData.notes} 
-                        onChange={handleChange} 
-                        rows="3"
-                        className="p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
-                        placeholder="Détails du contact, historique, etc."
-                    ></textarea>
-                </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                    <button type="button" onClick={onCancel} className="flex items-center px-4 py-2 btn-base btn-gray hover:bg-gray-400">
-                        Annuler
-                    </button>
-                    <button type="submit" className="flex items-center px-4 py-2 btn-base btn-indigo hover:bg-indigo-700">
-                        <Save className="w-5 h-5 mr-2" />
-                        {isNew ? 'Créer' : 'Sauvegarder'}
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-};
 
 const InputGroup = ({ icon, label, name, type = 'text', value, onChange, required = false }) => (
     <div className="flex flex-col">
@@ -517,23 +465,6 @@ const InputGroup = ({ icon, label, name, type = 'text', value, onChange, require
     </div>
 );
 
-const SelectGroup = ({ label, name, value, onChange, children }) => (
-    <div className="flex flex-col">
-        <label htmlFor={name} className="text-sm font-medium text-gray-700 mb-1">
-            {label}
-        </label>
-        <select
-            id={name}
-            name={name}
-            value={value}
-            onChange={onChange}
-            className="p-3 border border-gray-300 rounded-lg appearance-none bg-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
-        >
-            {children}
-        </select>
-    </div>
-);
-
 const StatCard = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between transition duration-300 hover:shadow-xl border-t-4 border-indigo-500">
         <div>
@@ -541,7 +472,7 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
             <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
         </div>
         <div className={`p-3 rounded-full ${color}`}>
-            <Icon className="w-8 h-8 text-white" /> {/* Utilisation de l'icône passée en prop */}
+            <Icon className="w-8 h-8 text-white" />
         </div>
     </div>
 );
@@ -579,24 +510,20 @@ const Navigation = ({ currentPage, setCurrentPage, userId, logout, isAdmin, isFi
     return (
         <div className="flex flex-col h-full bg-indigo-800 p-4 shadow-2xl">
             <div className="flex items-center justify-center lg:justify-start mb-8">
-                <img src={LOGO_URL} alt="Logo" className="h-10 lg:h-12 w-auto mx-auto filter brightness-0 invert lg:ml-0" />
-                <div className="text-xl lg:text-2xl font-extrabold text-white ml-3 hidden lg:block">
-                    Élections 2026
-                </div>
+                <img src={LOGO_URL} alt="Logo de Campagne" className="h-10 w-auto" />
             </div>
             
             <div className="space-y-3 flex flex-col items-center lg:items-stretch">
                 <NavItem page="dashboard" icon={Home} label="Tableau de Bord" />
                 <NavItem page="contacts" icon={Contact} label="Gestion des Contacts" />
                 <NavItem page="projections" icon={BarChart3} label="Projections" />
-                <NavItem page="team" icon={Users} label="Équipe (Mock)" /> 
+                <NavItem page="team" icon={Users} label="Équipe" /> 
             </div>
             <div className="mt-auto pt-4 border-t border-indigo-700 text-sm text-indigo-300">
                 <p className="hidden lg:block mb-2">Connecté en tant que: <span className="font-semibold">{isAdmin ? "Admin" : "Staff"}</span></p>
-                <p className="hidden lg:block">Statut: <span className="font-semibold">{isFirebaseConfigured ? "Connecté (Firebase)" : "Mode Démo/Simulé"}</span></p>
+                <p className="hidden lg:block">Statut: <span className="font-semibold">{isFirebaseConfigured ? "Firebase Actif" : "Mode Démo/Simulé"}</span></p>
                 <p className="hidden lg:block">Membre ID (UID):</p>
                 <p className="font-mono text-xs break-all mt-1">{userId || "N/A"}</p>
-                {/* Style Déconnexion Amélioré */}
                 <button 
                     onClick={logout} 
                     className="flex items-center justify-center lg:justify-start px-3 py-2 mt-4 btn-base btn-logout font-medium rounded-lg hover:bg-red-400 hover:text-white w-full shadow-md"
@@ -609,11 +536,15 @@ const Navigation = ({ currentPage, setCurrentPage, userId, logout, isAdmin, isFi
     );
 };
 
-// --- Logique Métier (Vues) ---
+// Utilitaire pour simuler la base de données locale (uniquement si Firebase échoue)
+// Clé: userId, Valeur: { contactId: contactObject }
+let contactsInMemory = {};
 
 const DashboardView = ({ contacts, userId, isAdmin, isFirebaseConfigured }) => {
     const totalContacts = contacts.length;
-    const acquiredContacts = contacts.filter(c => c.status === 'acquis').length; // Ajout du filtre Acquis
+    // Les contacts acquis incluent 'acquis' et 'vote_valide' (les deux sont à 100% de poids)
+    const acquiredContacts = contacts.filter(c => c.status === 'acquis' || c.status === 'vote_valide').length; 
+    
     const projectedVotes = contacts.reduce((sum, contact) => {
         const weight = PROJECTION_WEIGHTS[contact.status] / 100 || 0;
         return sum + weight;
@@ -628,9 +559,8 @@ const DashboardView = ({ contacts, userId, isAdmin, isFirebaseConfigured }) => {
         const label = STATUS_LABELS[statusKey];
         const color = STATUS_COLORS[statusKey];
         
-        // Déterminer la couleur du texte pour un meilleur contraste (principalement pour les fonds clairs)
-        const isDark = ['acquis', 'a_voter', 'vote_valide'].includes(statusKey);
-        const textColor = isDark ? 'text-white' : 'text-gray-900';
+        const isDarkBackground = ['acquis', 'a_voter', 'vote_valide'].includes(statusKey);
+        const textColor = isDarkBackground ? 'text-white' : 'text-gray-900';
         
         return (
             <div className={`p-4 rounded-xl shadow-md ${color} transition duration-200 transform hover:scale-[1.02] border border-gray-100`}>
@@ -646,41 +576,39 @@ const DashboardView = ({ contacts, userId, isAdmin, isFirebaseConfigured }) => {
             
             {!isFirebaseConfigured && (
                  <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-lg shadow-sm" role="alert">
-                    <p className="font-bold">Mode Démo/Simulé:</p>
-                    <p className="text-sm">Firebase n'est pas configuré. Les données ne sont pas persistantes et sont stockées uniquement dans la session actuelle.</p>
+                    <p className="font-bold">Mode Démo Actif:</p>
+                    <p className="text-sm">La configuration Firebase est incomplète ou a échoué. Les données ne sont pas persistantes.</p>
                 </div>
             )}
             
             <p className="text-lg text-gray-600 mb-6">
                 Connecté en tant que: <span className="font-semibold">{isAdmin ? "Admin" : "Membre du Staff"}</span> 
-                (ID: {userId ? userId.substring(0, 8) + '...' : 'N/A'})
+                (ID: <span className="text-xs font-mono break-all">{userId || 'N/A'}</span>)
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {/* Icônes désormais correctement affichées grâce à la propriété Icon dans StatCard */}
                 <StatCard 
                     title="Total Contacts Gérés" 
                     value={totalContacts} 
-                    icon={Users} // L'icône est passée comme composant
+                    icon={Users}
                     color="bg-indigo-600"
                 />
                 <StatCard 
                     title="Projection de Votes (Potentiel)" 
                     value={projectedVotes.toFixed(2)} 
-                    icon={Zap} // L'icône est passée comme composant
+                    icon={Zap}
                     color="bg-teal-600"
                 />
                 <StatCard 
                     title="Contacts Acquis (100%)" 
-                    value={acquiredContacts} // Utilise acquiredContacts
-                    icon={CheckCircle} // L'icône est passée comme composant
+                    value={acquiredContacts}
+                    icon={CheckCircle}
                     color="bg-green-600"
                 />
             </div>
             
             <div className="bg-white p-6 rounded-xl shadow-lg">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Statuts Détaillés</h2>
-                {/* Changement de la disposition des statuts en mosaïque */}
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                     {Object.keys(STATUS_LABELS).map((key) => (
                         <StatCardMosaic key={key} statusKey={key} count={statusCounts[key]} />
@@ -691,12 +619,7 @@ const DashboardView = ({ contacts, userId, isAdmin, isFirebaseConfigured }) => {
     );
 };
 
-// Utilitaire pour simuler la base de données locale
-let contactsInMemory = {};
-
-const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseConfigured }) => {
-    const [editingContact, setEditingContact] = useState(null);
-    const [isFormVisible, setIsFormVisible] = useState(false);
+const ContactsView = ({ db, userId, contacts, setContacts, isFirebaseConfigured }) => {
     const [filter, setFilter] = useState('');
     const [notification, setNotification] = useState(null); 
 
@@ -705,51 +628,14 @@ const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseCo
         setTimeout(() => setNotification(null), 3000); 
     };
 
-    const handleSaveContact = useCallback(async (contactData) => {
-        try {
-            if (isFirebaseConfigured) {
-                 const contactCollectionRef = collection(db, getContactsPath(userId));
-                 const docRef = doc(contactCollectionRef, contactData.id);
-                 // Utilise setDoc pour créer ou mettre à jour
-                 // On doit s'assurer de ne pas écraser les vraies timestamps de Firestore
-                 const dataToSave = {
-                    ...contactData,
-                    createdAt: contactData.createdAt, // Conserver l'ancienne valeur si elle existe (objet Date ou champ Firestore)
-                    updatedAt: serverTimestamp(), // Toujours mettre à jour
-                 };
-                 // Si c'est une nouvelle entrée, on s'assure que createdAt est aussi serverTimestamp
-                 if (contactData.createdAt === contactData.updatedAt) {
-                     dataToSave.createdAt = serverTimestamp();
-                 }
-
-                 await setDoc(docRef, dataToSave);
-                 showNotification(editingContact ? "Contact mis à jour avec succès (Firebase)!" : "Contact créé avec succès (Firebase)!"), 'success';
-            } else {
-                // Mode Simulé: Stockage en mémoire
-                const newContact = { ...contactData, updatedAt: new Date() };
-                contactsInMemory[userId] = { 
-                    ...(contactsInMemory[userId] || {}), 
-                    [contactData.id]: newContact 
-                };
-                
-                // Mettre à jour l'état React manuellement
-                const updatedList = Object.values(contactsInMemory[userId]).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                setContacts(updatedList);
-                showNotification(editingContact ? "Contact mis à jour (Mémoire)!" : "Contact créé (Mémoire)!"), 'success';
-            }
-            setIsFormVisible(false);
-            setEditingContact(null);
-        } catch (e) {
-            console.error("Erreur lors de l'enregistrement du contact: ", e);
-            showNotification("Erreur lors de la sauvegarde du contact.", 'error');
-        }
-    }, [db, userId, editingContact, isFirebaseConfigured, setContacts]);
-
     const handleDeleteContact = useCallback(async (contactId) => {
-        // Remplacement de window.confirm() par une alerte console + simulation
-        if (window.confirm("Êtes-vous sûr de vouloir supprimer ce contact ? (Ceci simule un confirm UI)")) {
+        // Remplacement de window.confirm() par un message console + simulation
+        console.log("CONFIRMATION REQUISE: Êtes-vous sûr de vouloir supprimer ce contact ? (Simulé)");
+        const isConfirmed = true; 
+        
+        if (isConfirmed) {
             try {
-                if (isFirebaseConfigured) {
+                if (isFirebaseConfigured && db) {
                     const contactCollectionRef = collection(db, getContactsPath(userId));
                     const docRef = doc(contactCollectionRef, contactId);
                     await deleteDoc(docRef);
@@ -759,8 +645,7 @@ const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseCo
                     if (contactsInMemory[userId] && contactsInMemory[userId][contactId]) {
                         delete contactsInMemory[userId][contactId];
                         
-                        // Mettre à jour l'état React manuellement
-                        const updatedList = Object.values(contactsInMemory[userId]).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                        const updatedList = Object.values(contactsInMemory[userId] || {}).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                         setContacts(updatedList);
                         showNotification("Contact supprimé (Mémoire).");
                     }
@@ -774,55 +659,23 @@ const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseCo
         }
     }, [db, userId, isFirebaseConfigured, setContacts]);
 
-    const handleEditClick = (contact) => {
-        setEditingContact(contact);
-        setIsFormVisible(true);
-    };
-
-    const handleNewClick = () => {
-        setEditingContact(null);
-        setIsFormVisible(true);
-    };
-
-    const handleCancel = () => {
-        setIsFormVisible(false);
-        setEditingContact(null);
-    };
 
     const filteredContacts = contacts.filter(c => 
-        c.name.toLowerCase().includes(filter.toLowerCase()) || 
-        c.phone.includes(filter) ||
+        (c.name || '').toLowerCase().includes(filter.toLowerCase()) || 
+        (c.phone || '').includes(filter) ||
         (STATUS_LABELS[c.status] || '').toLowerCase().includes(filter.toLowerCase()) ||
         (c.region || '').toLowerCase().includes(filter.toLowerCase())
     );
 
-    if (isFormVisible) {
-        return (
-            <div className="p-6">
-                <ContactForm 
-                    contact={editingContact} 
-                    onSubmit={handleSaveContact} 
-                    onCancel={handleCancel} 
-                    userId={userId} 
-                    isFirebaseConfigured={isFirebaseConfigured}
-                />
-                 {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-            </div>
-        );
-    }
-
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-6">Gestion des Contacts ({contacts.length} Total)</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-3">Gestion des Contacts ({contacts.length} Total)</h1>
+            <p className="text-gray-600 mb-6 border-l-4 border-indigo-400 pl-3 py-1 bg-indigo-50 rounded-lg">
+                Les contacts sont gérés et importés directement depuis la base de données Firebase. 
+                Cette interface est dédiée à la consultation et au nettoyage des données.
+            </p>
             
-            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                <button 
-                    onClick={handleNewClick} 
-                    className="flex items-center px-6 py-3 font-semibold rounded-xl shadow-lg transition duration-150 transform hover:scale-[1.02] btn-base btn-indigo"
-                >
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Ajouter Nouveau Contact
-                </button>
+            <div className="flex justify-end items-center mb-6 flex-wrap gap-4">
                 <input
                     type="text"
                     placeholder="Filtrer par nom, téléphone, statut, région..."
@@ -840,7 +693,7 @@ const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseCo
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Région</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supprimer</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -856,16 +709,9 @@ const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseCo
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                     <button 
-                                        onClick={() => handleEditClick(contact)} 
-                                        className="text-indigo-600 hover:text-indigo-900 transition duration-150 p-1 rounded-full hover:bg-indigo-100"
-                                        title="Modifier"
-                                    >
-                                        <Contact className="w-5 h-5" />
-                                    </button>
-                                    <button 
                                         onClick={() => handleDeleteContact(contact.id)} 
                                         className="text-red-600 hover:text-red-900 transition duration-150 p-1 rounded-full hover:bg-red-100"
-                                        title="Supprimer"
+                                        title="Supprimer le contact (Nettoyage des données)"
                                     >
                                     <Trash2 className="w-5 h-5" />
                                     </button>
@@ -874,7 +720,7 @@ const ContactsView = ({ db, userId, contacts, setContacts, isAdmin, isFirebaseCo
                         )) : (
                             <tr>
                                 <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
-                                    Aucun contact trouvé. Commencez par en ajouter un!
+                                    Aucun contact trouvé. Les contacts sont chargés depuis Firebase.
                                 </td>
                             </tr>
                         )}
@@ -985,51 +831,165 @@ const ProjectionsView = ({ contacts }) => {
     );
 };
 
-const TeamView = () => (
-    <div className="p-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Section Équipe (Mock)</h1>
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-lg shadow-sm" role="alert">
-            <p className="font-bold">Note:</p>
-            <p className="text-sm">Cette section présente des données d'équipe simulées. Pour une gestion multi-utilisateurs complète et des rôles Admin/Membre réels, il faudrait une collection publique `artifacts/{appId}/public/data/members` pour lister tous les membres et une logique de vérification de `customClaims` dans Firebase.</p>
-        </div>
+// --- Vue Équipe (Gestion Admin du Staff) ---
+const TeamView = ({ db, isAdmin, staffMembers, isFirebaseConfigured }) => {
+    const [name, setName] = useState('');
+    const [staffId, setStaffId] = useState('');
+    const [isFormVisible, setIsFormVisible] = useState(false);
+    const [notification, setNotification] = useState(null); 
+
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 3000); 
+    };
+    
+    const handleAddStaff = async (e) => {
+        e.preventDefault();
+        if (!name.trim() || !staffId.trim()) {
+            showNotification("Le nom et l'ID du staff sont obligatoires.", 'error');
+            return;
+        }
+
+        if (!isFirebaseConfigured || !db) {
+            showNotification("Action impossible: Firebase non configuré.", 'error');
+            return;
+        }
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-                { name: "Marie Khoury", role: "Coordinatrice Beyrouth", contacts: 45 },
-                { name: "Georges Saab", role: "Responsable Nord", contacts: 62 },
-                { name: "Lina Fares", role: "Volontaire Mont-Liban", contacts: 28 },
-                { name: "Karim Assaf", role: "Analyste de Données", contacts: 10 },
-            ].map((member, index) => (
-                <div key={index} className="bg-white p-5 rounded-xl shadow-lg border border-gray-100 transition duration-300 hover:shadow-xl">
-                    <div className="flex items-center space-x-4">
-                        <Users className="w-8 h-8 text-indigo-500" />
-                        <div>
-                            <p className="text-lg font-semibold text-gray-900">{member.name}</p>
-                            <p className="text-sm text-gray-600">{member.role}</p>
-                        </div>
-                    </div>
-                    <p className="mt-3 text-sm text-gray-700">
-                        Contacts Gérés: <span className="font-bold text-indigo-600">{member.contacts}</span>
-                    </p>
+        try {
+            const staffRef = collection(db, getStaffPath());
+            // Utilise le staffId comme ID du document pour la traçabilité et l'unicité
+            await setDoc(doc(staffRef, staffId), {
+                name: name.trim(),
+                staffId: staffId.trim(),
+                role: 'staff',
+                createdAt: serverTimestamp(),
+            });
+
+            showNotification(`Membre du staff '${name}' ajouté avec succès!`, 'success');
+            setName('');
+            setStaffId('');
+            setIsFormVisible(false);
+        } catch (error) {
+            console.error("Erreur lors de l'ajout du staff: ", error);
+            showNotification("Erreur lors de l'ajout du membre du staff.", 'error');
+        }
+    };
+    
+    const handleDeleteStaff = async (id, staffName) => {
+        // Simulation de confirmation
+        console.log(`CONFIRMATION REQUISE: Supprimer le staff ${staffName}? (Simulé)`);
+        const isConfirmed = true; 
+        
+        if (!isConfirmed) return;
+        
+        if (!isFirebaseConfigured || !db) {
+            showNotification("Action impossible: Firebase non configuré.", 'error');
+            return;
+        }
+
+        try {
+            const docRef = doc(db, getStaffPath(), id);
+            await deleteDoc(docRef);
+            showNotification(`Membre '${staffName}' supprimé.`, 'success');
+        } catch (error) {
+            console.error("Erreur lors de la suppression du staff: ", error);
+            showNotification("Erreur lors de la suppression du membre du staff.", 'error');
+        }
+    };
+
+    return (
+        <div className="p-6">
+            <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                <Users className="w-8 h-8 mr-3 text-indigo-600" />
+                Gestion de l'Équipe
+            </h1>
+            
+            {!isFirebaseConfigured && (
+                 <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-lg shadow-sm" role="alert">
+                    <p className="font-bold">Mode Démo Actif:</p>
+                    <p className="text-sm">La gestion d'équipe nécessite une configuration **Firebase** et n'est pas disponible en mode démo in-memory.</p>
                 </div>
-            ))}
+            )}
+            
+            {isAdmin && isFirebaseConfigured && (
+                <div className="mb-6">
+                    <button 
+                        onClick={() => setIsFormVisible(prev => !prev)}
+                        className={`flex items-center px-6 py-3 font-semibold rounded-xl shadow-lg transition duration-150 transform hover:scale-[1.02] btn-base ${isFormVisible ? 'btn-gray' : 'btn-indigo'}`}
+                    >
+                        <User className="w-5 h-5 mr-2" />
+                        {isFormVisible ? 'Annuler Ajout' : 'Ajouter un Membre Staff'}
+                    </button>
+                    
+                    {isFormVisible && (
+                        <div className="mt-4 p-4 bg-white rounded-xl shadow-lg border border-indigo-100">
+                            <h3 className="text-xl font-semibold text-gray-800 mb-4">Nouveau Membre du Staff</h3>
+                            <form onSubmit={handleAddStaff} className="space-y-4">
+                                <InputGroup icon={<User className="w-5 h-5 text-indigo-500" />} label="Nom du Staff" name="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                                <InputGroup icon={<Shield className="w-5 h-5 text-indigo-500" />} label="Identifiant (UID)" name="staffId" value={staffId} onChange={(e) => setStaffId(e.target.value)} required />
+                                <button type="submit" className="w-full flex items-center justify-center px-4 py-2 btn-base btn-indigo">
+                                    <User className="w-5 h-5 mr-2" />
+                                    Ajouter l'Utilisateur
+                                </button>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            )}
+            
+            {isAdmin && !isFirebaseConfigured && (
+                 <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg shadow-sm" role="alert">
+                    <p className="font-bold">Accès Admin (Simulé) - Action Impossible:</p>
+                    <p className="text-sm">La gestion d'équipe nécessite la persistance Firebase (public data) pour fonctionner correctement.</p>
+                </div>
+            )}
+
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Membres Actuels ({staffMembers.length})</h2>
+                {staffMembers.length === 0 ? (
+                    <p className="text-gray-500">Aucun membre du staff n'a été ajouté à cette équipe.</p>
+                ) : (
+                    <div className="space-y-3">
+                        {staffMembers.map((member) => (
+                            <div key={member.staffId} className="flex justify-between items-center p-3 border-b border-gray-100 last:border-b-0 hover:bg-indigo-50 rounded-lg">
+                                <div>
+                                    <p className="font-medium text-gray-800">{member.name}</p>
+                                    <p className="text-xs font-mono text-gray-500 break-all">ID: {member.staffId}</p>
+                                    <p className="text-xs text-indigo-600 font-semibold">{member.role === 'admin' ? 'Administrateur' : 'Membre Staff'}</p>
+                                </div>
+                                {isAdmin && isFirebaseConfigured && member.staffId !== 'mock_admin_uid' && (
+                                    <button 
+                                        onClick={() => handleDeleteStaff(member.staffId, member.name)}
+                                        className="text-red-600 hover:text-red-800 p-2 rounded-full transition duration-150 hover:bg-red-100"
+                                        title="Supprimer le membre"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
         </div>
-    </div>
-);
+    );
+};
+
 
 // --- Splash Screen pour l'Authentification ---
 const SplashScreen = ({ login, loading, isFirebaseConfigured }) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-600 to-purple-800 p-6">
             <div className="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-md w-full animate-fade-in">
-                <img src={LOGO_URL} alt="Logo" className="h-20 w-auto mx-auto mb-6" />
+                <img src={LOGO_URL} alt="Logo" className="h-14 w-auto mx-auto mb-6" />
                 <h1 className="text-4xl font-extrabold text-gray-800 mb-3">Élections Consulaires 2026</h1>
-                <p className="text-lg text-gray-600 mb-8">Connectez-vous pour accéder à votre espace.</p>
+                <p className="text-lg text-gray-600 mb-8">Connectez-vous pour accéder à votre espace de gestion des contacts.</p>
                 
                 {!isFirebaseConfigured && (
                     <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-lg mb-6" role="alert">
-                        <strong className="font-bold">Mode Démo:</strong>
-                        <span className="block sm:inline"> La configuration Firebase est absente. Les données ne seront pas sauvegardées.</span>
+                        <strong className="font-bold">Mode Démo Actif:</strong>
+                        <span className="block sm:inline"> La configuration Firebase est absente. Les données ne sont pas persistantes.</span>
                     </div>
                 )}
 
@@ -1045,7 +1005,7 @@ const SplashScreen = ({ login, loading, isFirebaseConfigured }) => {
                             className={`w-full flex items-center justify-center px-6 py-3 font-semibold rounded-xl shadow-lg transition duration-200 transform bg-red-600 text-white hover:bg-red-700 hover:scale-[1.02]`}
                         >
                             <Shield className="w-5 h-5 mr-3" />
-                            Connexion Admin (Développeur)
+                            Connexion Administrateur (Mock)
                         </button>
                         <button 
                             onClick={() => login('staff')}
@@ -1056,10 +1016,6 @@ const SplashScreen = ({ login, loading, isFirebaseConfigured }) => {
                         </button>
                     </div>
                 )}
-
-                <p className="text-xs text-gray-400 mt-8">
-                    Note: La connexion en **Mode Démo** est simulée.
-                </p>
             </div>
         </div>
     );
@@ -1071,42 +1027,79 @@ const SplashScreen = ({ login, loading, isFirebaseConfigured }) => {
 const AppContent = ({ db, userId, logout, isAdmin, isFirebaseConfigured }) => {
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [contacts, setContacts] = useState([]);
-    
-    // 1. Abonnement aux données de l'utilisateur actuel
+    const [staffMembers, setStaffMembers] = useState([]); // Nouveau state pour les membres du staff
+
+    // 1. Abonnement aux données de l'utilisateur actuel (Contacts Privés)
     useEffect(() => {
         if (!userId) return;
 
         // Si Firebase n'est pas configuré, on utilise le stockage en mémoire
         if (!isFirebaseConfigured || !db) {
-            console.log("Using in-memory storage for demo mode.");
-            // Charger les données de la mémoire au démarrage
-            const initialContacts = Object.values(contactsInMemory[userId] || {}).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            console.log("Using in-memory storage for contacts (demo mode).");
+            // S'assurer que le contactsInMemory est initialisé pour cet utilisateur
+            if (!contactsInMemory[userId]) {
+                 contactsInMemory[userId] = {};
+            }
+            const initialContacts = Object.values(contactsInMemory[userId]).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setContacts(initialContacts);
             return;
         }
 
-        // Si Firebase est configuré
-        console.log(`Setting up snapshot listener for user: ${userId}`);
+        // Si Firebase est configuré, on s'abonne à la collection
+        console.log(`Setting up snapshot listener for user contacts: ${userId}`);
         const contactsRef = collection(db, getContactsPath(userId));
         
-        // Requête pour les contacts de l'utilisateur actuel. 
-        const q = query(contactsRef, where('ownerId', '==', userId)); 
+        const q = query(contactsRef); 
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedContacts = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
-            // Tri en mémoire (par nom par défaut)
             fetchedContacts.sort((a, b) => (a.name || '').localeCompare(b.name || '')); 
             setContacts(fetchedContacts);
             console.log(`Fetched ${fetchedContacts.length} contacts from Firebase.`);
         }, (error) => {
-            console.error("Erreur lors de la récupération des contacts:", error);
+            console.error("Erreur lors de la récupération des contacts (onSnapshot):", error);
         });
 
         return () => unsubscribe();
     }, [db, userId, isFirebaseConfigured]);
+
+    // 2. Abonnement aux données du Staff (Liste Partagée / Public)
+    useEffect(() => {
+        if (!isFirebaseConfigured || !db) {
+            setStaffMembers([]); 
+            return;
+        }
+
+        console.log(`Setting up snapshot listener for staff members.`);
+        const staffRef = collection(db, getStaffPath());
+        
+        const q = query(staffRef); 
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedStaff = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            fetchedStaff.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            // Simuler l'ajout de l'admin par défaut pour qu'il apparaisse dans la liste
+            const staffList = [{ staffId: 'mock_admin_uid', name: 'Administrateur (Mock)', role: 'admin' }, ...fetchedStaff];
+            
+            // Filtrer les doublons si l'admin mock a été accidentellement ajouté à la base
+            const uniqueStaff = Array.from(new Set(staffList.map(a => a.staffId)))
+                .map(staffId => staffList.find(a => a.staffId === staffId));
+
+            setStaffMembers(uniqueStaff.filter(m => m.staffId)); // Filtre les entrées nulles ou vides
+            console.log(`Fetched ${fetchedStaff.length} staff members from Firebase.`);
+        }, (error) => {
+            console.error("Erreur lors de la récupération des membres du staff (onSnapshot):", error);
+        });
+
+        return () => unsubscribe();
+    }, [db, isFirebaseConfigured]);
+
 
     // Affichage conditionnel des vues
     const renderPage = () => {
@@ -1114,11 +1107,17 @@ const AppContent = ({ db, userId, logout, isAdmin, isFirebaseConfigured }) => {
             case 'dashboard':
                 return <DashboardView contacts={contacts} userId={userId} isAdmin={isAdmin} isFirebaseConfigured={isFirebaseConfigured} />;
             case 'contacts':
-                return <ContactsView db={db} userId={userId} contacts={contacts} setContacts={setContacts} isAdmin={isAdmin} isFirebaseConfigured={isFirebaseConfigured} />;
+                // Passage de setContacts pour la suppression en mode démo
+                return <ContactsView db={db} userId={userId} contacts={contacts} setContacts={setContacts} isFirebaseConfigured={isFirebaseConfigured} />;
             case 'projections':
                 return <ProjectionsView contacts={contacts} />;
             case 'team':
-                return <TeamView />;
+                return <TeamView 
+                            db={db} 
+                            isAdmin={isAdmin} 
+                            staffMembers={staffMembers} 
+                            isFirebaseConfigured={isFirebaseConfigured}
+                        />;
             default:
                 return <DashboardView contacts={contacts} userId={userId} isAdmin={isAdmin} isFirebaseConfigured={isFirebaseConfigured} />;
         }
@@ -1144,36 +1143,31 @@ const AppContent = ({ db, userId, logout, isAdmin, isFirebaseConfigured }) => {
 };
 
 const App = () => {
-    const { db, auth, userId, loading, login, logout, authReady, isAdmin, isFirebaseConfigured } = useFirebaseInit();
+    const { db, userId, loading, login, logout, authReady, isAdmin, isFirebaseConfigured } = useFirebaseInit();
 
-    // 0. Injecter les styles globaux/fallback + le CDN Tailwind
     return (
         <React.Fragment>
             <GlobalStyles /> 
-            {/* 1. Afficher l'écran de chargement initial (Uniquement au tout début) */}
-            {loading && !authReady && (
+            {loading && !userId && (
                 <div className="flex items-center justify-center h-screen bg-gray-50">
                     <Loader className="w-8 h-8 animate-spin text-indigo-600 mr-3" />
                     <p className="text-lg font-medium text-indigo-700">Initialisation de l'application...</p>
                 </div>
             )}
             
-            {/* 2. Si l'authentification est prête mais pas d'utilisateur connecté, afficher le splash screen */}
             {authReady && !userId && (
                 <SplashScreen login={login} loading={loading} isFirebaseConfigured={isFirebaseConfigured} />
             )}
 
-            {/* 3. Si authentifié (userId est présent), afficher l'application principale */}
             {userId && (
                 <AppContent db={db} userId={userId} logout={logout} isAdmin={isAdmin} isFirebaseConfigured={isFirebaseConfigured} />
             )}
             
-            {/* Cas d'erreur non géré */}
             {!loading && !userId && !authReady && (
                 <div className="flex items-center justify-center h-screen bg-red-900 text-white p-6">
                     <h1 className="text-3xl font-bold mb-4">Erreur Inattendue</h1>
                     <p className="text-lg text-red-300 text-center max-w-lg">
-                        Veuillez recharger l'application.
+                        Veuillez recharger l'application ou vérifier la configuration Firebase.
                     </p>
                 </div>
             )}
