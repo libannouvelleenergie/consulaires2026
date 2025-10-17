@@ -1,15 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  
-  // NOUVEAU: Configure le chemin de base (public base path)
-  // Il DOIT correspondre au nom de votre repository GitHub.
-  // Ce chemin sera utilisé comme préfixe pour tous les assets compilés (JS, CSS, images).
-  base: '/consulaires2026/', 
+// Obtenez le nom du dépôt à partir de l'URL GitHub Pages
+// Si l'URL est https://<votre-nom>.github.io/nom-du-depot/, le base est /nom-du-depot/
+const REPO_NAME = 'consulaires2026'; // REMPLACEZ 'consulaires2026' par le nom exact de votre dépôt si différent
 
-  // Si vous aviez base: './' cela fonctionnerait aussi, mais l'utilisation du nom du repo est plus sécurisée pour le déploiement sur GitHub Pages.
-  // base: './'
+export default defineConfig({
+  // **C'EST CETTE LIGNE QUI FAIT TOUTE LA DIFFÉRENCE**
+  base: `/${REPO_NAME}/`, 
+  plugins: [react()],
 })
